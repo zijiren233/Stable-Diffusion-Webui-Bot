@@ -283,6 +283,11 @@ type interrogateData struct {
 
 type data struct {
 	Images []string `json:"images"`
+	Detail []struct {
+		Loc  []interface{} `json:"loc"`
+		Msg  string        `json:"msg"`
+		Type string        `json:"type"`
+	} `json:"detail"`
 }
 
 func parseData(rowData io.Reader) ([][]byte, error) {
@@ -295,6 +300,14 @@ func parseData(rowData io.Reader) ([][]byte, error) {
 	err = json.Unmarshal(d, data)
 	if err != nil {
 		return nil, fmt.Errorf("json unmarshal err: %v, resp: %s", err, string(d))
+	}
+	if len(data.Detail) != 0 {
+		msg := bytes.NewBuffer(nil)
+		for _, v := range data.Detail {
+			msg.WriteString(v.Msg)
+			msg.WriteRune('\n')
+		}
+		return nil, errors.New(msg.String())
 	}
 	for _, v := range data.Images {
 		data, err := base64.StdEncoding.DecodeString(v)
