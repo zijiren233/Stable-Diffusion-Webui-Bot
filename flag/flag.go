@@ -14,6 +14,7 @@ var (
 	ImageSavePath string
 	HOST          string
 	WEBSITE       string
+	I18nExtraPath string
 )
 
 func init() {
@@ -28,4 +29,5 @@ func init() {
 	flag.StringVar(&ImageSavePath, "isp", `/mnt/stable-diffusion-webui-bot`, "Image Save Path")
 	flag.StringVar(&DSN, "dsn", `./stable-diffusion-webui-bot.db`, "database, postgres|sqlite")
 	flag.StringVar(&TgToken, "t", ``, "telegram bot token")
+	flag.StringVar(&I18nExtraPath, "i18np", `./i18n-extra`, "i18n extra translated")
 }

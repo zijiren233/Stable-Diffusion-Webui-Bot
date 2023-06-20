@@ -1,7 +1,7 @@
 package i18n
 
 func init() {
-	register(text{language: en_us, Code: "en_us", Name: "English"})
+	register(text{language: en_us, Code: "en_us", Name: "English", Default: true})
 }
 
 var en_us = map[string]string{

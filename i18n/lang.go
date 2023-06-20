@@ -1,41 +1,46 @@
 package i18n
 
 import (
-	"embed"
 	"fmt"
+	"os"
+	"path"
 
+	parseflag "github.com/zijiren233/stable-diffusion-webui-bot/flag"
 	"github.com/zijiren233/stable-diffusion-webui-bot/utils"
 
 	"gopkg.in/yaml.v3"
 )
 
-//go:embed extra
-var extra embed.FS
-
 var lang = map[string]text{}
 
 var langList = []text{}
+
+var defaultCode = ""
 
 type text struct {
 	language map[string]string
 	Code     string
 	Name     string
+	Default  bool
 }
 
 func init() {
-	extras, err := extra.ReadDir("extra")
+	if err := os.MkdirAll(parseflag.I18nExtraPath, os.ModePerm); err != nil {
+		panic(err)
+	}
+	extras, err := os.ReadDir(parseflag.I18nExtraPath)
 	if err != nil {
 		panic(err)
 	}
 	for _, meta := range extras {
 		if !meta.IsDir() {
-			data, err := extra.ReadFile(fmt.Sprintf("extra/%s", meta.Name()))
+			file, err := os.OpenFile(path.Join(parseflag.I18nExtraPath, meta.Name()), os.O_CREATE|os.O_RDONLY, os.ModePerm)
 			if err != nil {
 				panic(err)
 			}
+			defer file.Close()
 			i18nMap := make(map[string]string)
-			err = yaml.Unmarshal(data, i18nMap)
-			if err != nil {
+			if err = yaml.NewDecoder(file).Decode(i18nMap); err != nil {
 				panic(err)
 			}
 			code := utils.GetFileNamePrefix(meta.Name())
@@ -47,6 +52,9 @@ func init() {
 func register(l text) {
 	lang[l.Code] = l
 	langList = append(langList, l)
+	if l.Default {
+		defaultCode = l.Code
+	}
 }
 
 func LoadLang(langType, tag string) string {
@@ -54,14 +62,11 @@ func LoadLang(langType, tag string) string {
 	if l != "" {
 		return l
 	} else {
-		return lang["en_us"].language[tag]
+		return lang[defaultCode].language[tag]
 	}
 }
 
 func LoadExtraLang(langType, tag string) string {
-	if langType == "en_us" {
-		return tag
-	}
 	l := lang[fmt.Sprintf("%s:Extra", langType)].language[tag]
 	if l != "" {
 		return l
