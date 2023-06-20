@@ -6,6 +6,7 @@
 - Recommended Stable Diffusion Webui Start Command Args `export COMMANDLINE_ARGS="--api --no-hashing --skip-torch-cuda-test --skip-version-check --disable-nan-check --no-download-sd-model --no-half-controlnet --upcast-sampling --no-half-vae --opt-sdp-attention --disable-safe-unpickle --lowram --opt-split-attention --opt-channelslast --deepdanbooru"`
 - The necessary extensions
   - `https://github.com/Mikubill/sd-webui-controlnet`
+    - You can run this cmd to install controlnet or update `if [ ! -d "./stable-diffusion-webui/extensions/controlnet" ]; then git clone --depth 1 "https://github.com/Mikubill/sd-webui-controlnet" "./stable-diffusion-webui/extensions/controlnet"; else git -C "./stable-diffusion-webui/extensions/controlnet" pull; fi`
 
 ---
 
