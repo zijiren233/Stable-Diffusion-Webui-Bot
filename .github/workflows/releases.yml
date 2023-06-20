@@ -4,7 +4,7 @@ on:
     workflow_dispatch:
 
 jobs:
-    build:
+    releases:
         runs-on: ubuntu-latest
 
         steps:
@@ -16,7 +16,7 @@ jobs:
                   xgo_version: latest
                   go_version: 1.19
                   dest: build
-                  targets: linux/arm64 linux/amd64
+                  targets: linux/arm64 linux/amd64 windows/amd64 darwin/amd64 darwin/arm64
                   v: false
                   x: false
                   race: false
@@ -30,5 +30,4 @@ jobs:
                   automatic_release_tag: "latest"
                   title: Development Build
                   prerelease: true
-                  files: |
-                      ./build/tg-ai-linux-arm64
+                  files: build/*
