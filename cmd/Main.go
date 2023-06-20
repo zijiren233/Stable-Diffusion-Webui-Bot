@@ -97,7 +97,7 @@ func Main() {
 	defer mainPllo.Release()
 	Bot, err = tgbotapi.NewBotAPI(parseflag.TgToken)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("Init Telegram Bot With Token Error: %v", err))
 	}
 	router.SetBot(Bot)
 	router.Router()
