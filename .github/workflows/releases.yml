@@ -31,4 +31,4 @@ jobs:
                   title: Development Build
                   prerelease: true
                   files: |
-                    build/*
+                    build/github.com/zijiren233/*
