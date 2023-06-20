@@ -18,7 +18,7 @@ var (
 )
 
 func init() {
-	flag.BoolVar(&Dev, "d", false, "development mode")
+	flag.BoolVar(&Dev, "dev", false, "development mode")
 	flag.IntVar(&ImgMaxSize, "imgMax", 1638400, "image maximum resolution")
 	flag.Int64Var(&MyID, "owner", 2143676086, "owner telegram id")
 	flag.IntVar(&Port, "p", 8082, "port")
