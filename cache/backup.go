@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	parseflag "github.com/zijiren233/stable-diffusion-webui-bot/flag"
 	"github.com/zijiren233/stable-diffusion-webui-bot/utils"
 
 	"github.com/bluele/gcache"
@@ -19,7 +20,6 @@ import (
 )
 
 var (
-	Path      = `/mnt/stable-diffusion-webui-bot`
 	fileLock  = &sync.Mutex{}
 	fileLimit = rate.NewLimiter(9, 1)
 	kFileLock = kmutex.New()
@@ -102,7 +102,7 @@ func GetFileStat(md5 string) (fs.FileInfo, error) {
 
 func md52Path(md5 string) string {
 	builder := strings.Builder{}
-	builder.WriteString(Path)
+	builder.WriteString(parseflag.ImageSavePath)
 	for k, v := range md5 {
 		if k == 4 {
 			break

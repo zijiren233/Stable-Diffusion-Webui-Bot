@@ -1,0 +1,26 @@
+name: Build
+
+on:
+    push:
+    pull_request:
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v3
+
+            - name: Build
+              uses: crazy-max/ghaction-xgo@v2
+              with:
+                  xgo_version: latest
+                  go_version: 1.19
+                  dest: build
+                  targets: linux/arm64
+                  v: false
+                  x: false
+                  race: false
+                  ldflags: -s -w --extldflags "-static -fpic"
+                  buildmode: default
+                  trimpath: true

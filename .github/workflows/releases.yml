@@ -1,0 +1,34 @@
+name: Build
+
+on:
+    workflow_dispatch:
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v3
+
+            - name: Build
+              uses: crazy-max/ghaction-xgo@v2
+              with:
+                  xgo_version: latest
+                  go_version: 1.19
+                  dest: build
+                  targets: linux/arm64 linux/amd64
+                  v: false
+                  x: false
+                  race: false
+                  ldflags: -s -w --extldflags "-static -fpic"
+                  buildmode: default
+                  trimpath: true
+
+            - uses: "marvinpinto/action-automatic-releases@latest"
+              with:
+                  repo_token: "${{ secrets.GITHUB_TOKEN }}"
+                  automatic_release_tag: "latest"
+                  title: Development Build
+                  prerelease: true
+                  files: |
+                      ./build/tg-ai-linux-arm64

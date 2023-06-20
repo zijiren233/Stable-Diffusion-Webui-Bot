@@ -3,17 +3,17 @@ package parseflag
 import "flag"
 
 var (
-	TgToken    string
-	Dev        bool
-	WebHook    bool
-	Port       int
-	MyID       int64
-	DSN        string
-	ImgMaxSize int
-	MaxFree    int
-
-	HOST    string
-	WEBSITE string
+	TgToken       string
+	Dev           bool
+	WebHook       bool
+	Port          int
+	MyID          int64
+	DSN           string
+	ImgMaxSize    int
+	MaxFree       int
+	ImageSavePath string
+	HOST          string
+	WEBSITE       string
 )
 
 func init() {
@@ -25,6 +25,7 @@ func init() {
 	flag.StringVar(&HOST, "host", ``, "webhook and api host")
 	flag.StringVar(&WEBSITE, "web", `pyhdxy.top`, "website site host")
 	flag.BoolVar(&WebHook, "webhook", false, "enable telegram bot webhook")
+	flag.StringVar(&ImageSavePath, "isp", `/mnt/stable-diffusion-webui-bot`, "Image Save Path")
 	flag.StringVar(&DSN, "dsn", `./stable-diffusion-webui-bot.db`, "database, postgres|sqlite")
 	flag.StringVar(&TgToken, "t", ``, "telegram bot token")
 }

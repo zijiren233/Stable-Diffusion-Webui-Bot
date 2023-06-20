@@ -10,7 +10,6 @@ import (
 	"path"
 	"time"
 
-	"github.com/zijiren233/stable-diffusion-webui-bot/cache"
 	"github.com/zijiren233/stable-diffusion-webui-bot/db"
 	parseflag "github.com/zijiren233/stable-diffusion-webui-bot/flag"
 	"github.com/zijiren233/stable-diffusion-webui-bot/gconfig"
@@ -33,8 +32,14 @@ var (
 
 func init() {
 	rand.Seed(time.Now().UnixMilli())
-	os.RemoveAll(path.Join(os.TempDir(), "aiTmp"))
-	os.MkdirAll(path.Join(os.TempDir(), "aiTmp"), os.ModePerm)
+
+	if err := os.RemoveAll(path.Join(os.TempDir(), "tmp-stable-diffusion-webui-bot")); err != nil {
+		panic(err)
+	}
+
+	if err := os.MkdirAll(path.Join(os.TempDir(), "tmp-stable-diffusion-webui-bot"), os.ModePerm); err != nil {
+		panic(err)
+	}
 	colorlog.SetLogLevle(colorlog.L_Debug)
 }
 
@@ -85,9 +90,6 @@ func Main() {
 		panic(err)
 	}
 	api.Init(gconfig.API())
-	if parseflag.Dev {
-		cache.Path = path.Join(os.TempDir(), "aiTmp")
-	}
 	defer ants.Release()
 	mainPllo, _ = ants.NewPool(ants.DefaultAntsPoolSize, ants.WithOptions(ants.Options{ExpiryDuration: time.Minute, PreAlloc: false, Logger: nil, DisablePurge: false, Nonblocking: false, PanicHandler: func(i interface{}) {
 		colorlog.Fatalf(utils.PrintStackTrace(i))
