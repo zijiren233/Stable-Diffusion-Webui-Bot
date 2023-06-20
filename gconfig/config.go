@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/zijiren233/go-colorlog"
 	"github.com/zijiren233/stable-diffusion-webui-bot/utils"
 
 	"gopkg.in/yaml.v3"
@@ -123,6 +124,12 @@ func Load(configPath string) error {
 	}
 	sort.Strings(extraModelAllGroup)
 	sort.Sort(SortEmbedding(config.Embedding))
+	if len(config.Api) == 0 {
+		colorlog.Warning("API list is empty")
+	}
+	if len(config.Model) == 0 {
+		colorlog.Warning("Model list is empty")
+	}
 	return nil
 }
 
