@@ -1,0 +1,493 @@
+basePath: /api
+definitions:
+  router.Any2Img:
+    properties:
+      control_photo:
+        type: string
+      control_preprocess:
+        type: string
+      control_process:
+        type: string
+      height:
+        type: integer
+      mode:
+        type: string
+      model:
+        type: string
+      num:
+        type: integer
+      pre_photo:
+        type: string
+      scale:
+        type: integer
+      seed:
+        type: integer
+      steps:
+        type: integer
+      strength:
+        type: number
+      tag:
+        type: string
+      uc:
+        type: string
+      width:
+        type: integer
+    type: object
+  router.CtrlPhotoCfg:
+    properties:
+      control_photo:
+        items:
+          type: string
+        type: array
+      control_preprocess:
+        type: string
+      res_size:
+        type: integer
+    type: object
+  router.I18N:
+    properties:
+      groups:
+        type: string
+      key:
+        type: string
+      value:
+        type: string
+    type: object
+  router.Resp:
+    properties:
+      data: {}
+      err:
+        type: string
+      time:
+        type: integer
+    type: object
+  router.SuperResolutionCfg:
+    properties:
+      multiplier:
+        type: integer
+      photo:
+        items:
+          type: string
+        type: array
+    type: object
+host: creation.pyhdxy.top
+info:
+  contact:
+    email: pyh1670605849@gmail.com
+    name: honeyxybb
+    url: https://t.me/honeyxybb
+  description: Easy API
+  termsOfService: https://t.me/NovelAIDraw_bot
+  title: Creation AI API
+  version: "1.0"
+paths:
+  /control-preprocess:
+    get:
+      description: Get All Control PreProcess
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/router.Resp'
+      summary: Get All Control PreProcess
+      tags:
+      - Models
+  /control-process:
+    get:
+      description: Get All Control Process
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/router.Resp'
+      summary: Get All Control Process
+      tags:
+      - Models
+  /detect-ctrl-photo:
+    get:
+      description: Detect to Ctrl Photo
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/router.Resp'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/router.Resp'
+      summary: Detect to Ctrl Photo
+      tags:
+      - Image Handler
+    post:
+      consumes:
+      - application/json
+      description: Detect to Ctrl Photo
+      parameters:
+      - description: Ctrl Photo Config
+        in: body
+        name: config
+        required: true
+        schema:
+          $ref: '#/definitions/router.CtrlPhotoCfg'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/router.Resp'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/router.Resp'
+      summary: Detect to Ctrl Photo
+      tags:
+      - Image Handler
+  /draw:
+    get:
+      description: Any to Img
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/router.Resp'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/router.Resp'
+      summary: Draw Img
+      tags:
+      - Image Handler
+    post:
+      consumes:
+      - application/json
+      description: Any to Img
+      parameters:
+      - description: Draw Config
+        in: body
+        name: config
+        required: true
+        schema:
+          $ref: '#/definitions/router.Any2Img'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/router.Resp'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/router.Resp'
+      summary: Draw Img
+      tags:
+      - Image Handler
+  /extra-model-groups:
+    get:
+      description: Get Extra Model Group
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/router.Resp'
+      summary: Get Extra Model Group
+      tags:
+      - Models
+  /extra-model-groups/{group}:
+    get:
+      description: Get Extra Model With Group
+      parameters:
+      - description: Group Name
+        in: path
+        name: group
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/router.Resp'
+      summary: Get Extra Model With Group
+      tags:
+      - Models
+  /extra-models:
+    get:
+      description: Get All Extra Model
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/router.Resp'
+      summary: Get All Extra Model
+      tags:
+      - Models
+  /i18n-json/{code}:
+    get:
+      description: 'Get i18n language by lang code, eg: /i18n-json/zh_cn'
+      parameters:
+      - description: Language code
+        in: path
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: body
+      summary: Get i18n language
+      tags:
+      - I18N
+  /i18n/{code}:
+    get:
+      description: 'Get i18n language by lang code, eg: /i18n/zh_cn'
+      parameters:
+      - description: Language code
+        in: path
+        name: code
+        required: true
+        type: string
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/router.I18N'
+            type: array
+      summary: Get i18n language
+      tags:
+      - I18N
+  /images/{filename}:
+    get:
+      description: Images
+      parameters:
+      - description: filename
+        in: path
+        name: filename
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/router.Resp'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/router.Resp'
+      summary: Images
+      tags:
+      - Images
+  /interrupt:
+    get:
+      description: Interrupt Draw Task
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/router.Resp'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/router.Resp'
+      summary: Interrupt Draw Task
+      tags:
+      - Image Handler
+  /models:
+    get:
+      description: Get All Models
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/router.Resp'
+      summary: Get All Models
+      tags:
+      - Models
+  /modes:
+    get:
+      description: Get All Models
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/router.Resp'
+      summary: Get All Models
+      tags:
+      - Models
+  /search-images:
+    get:
+      description: search Images
+      parameters:
+      - description: keywords
+        in: query
+        name: keywords
+        required: true
+        type: string
+      - description: maxcount
+        in: query
+        name: maxcount
+        type: boolean
+      - description: 'order type: latest | random'
+        in: query
+        name: order_type
+        type: string
+      - description: page
+        in: query
+        name: page
+        type: string
+      - description: time
+        in: query
+        name: time
+        type: string
+      - description: 'cfg type: json | yaml'
+        in: query
+        name: cfg_type
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/router.Resp'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/router.Resp'
+      summary: search Images
+      tags:
+      - Images
+  /search-user-images:
+    get:
+      description: search User Images
+      parameters:
+      - description: keywords
+        in: query
+        name: keywords
+        required: true
+        type: string
+      - description: maxcount
+        in: query
+        name: maxcount
+        type: boolean
+      - description: 'order type: latest | random'
+        in: query
+        name: order_type
+        type: string
+      - description: page
+        in: query
+        name: page
+        type: string
+      - description: time
+        in: query
+        name: time
+        type: string
+      - description: 'cfg type: json | yaml'
+        in: query
+        name: cfg_type
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/router.Resp'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/router.Resp'
+      summary: search User Images
+      tags:
+      - Images
+  /super-resolution:
+    get:
+      description: SuperResolution
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/router.Resp'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/router.Resp'
+      summary: SuperResolution
+      tags:
+      - Image Handler
+    post:
+      consumes:
+      - application/json
+      description: SuperResolution
+      parameters:
+      - description: SuperResolution Config
+        in: body
+        name: config
+        required: true
+        schema:
+          $ref: '#/definitions/router.SuperResolutionCfg'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/router.Resp'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/router.Resp'
+      summary: SuperResolution
+      tags:
+      - Image Handler
+  /test-draw-config:
+    post:
+      consumes:
+      - application/json
+      description: Test Draw Config
+      parameters:
+      - description: Draw Config
+        in: body
+        name: config
+        required: true
+        schema:
+          $ref: '#/definitions/router.Any2Img'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/router.Resp'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/router.Resp'
+      summary: Test Draw Config
+      tags:
+      - Image Handler
+swagger: "2.0"

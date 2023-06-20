@@ -1,0 +1,118 @@
+api:
+  - url: https://webui-api.domain.com
+    cached: 1
+    username:
+    password:
+
+group: https://t.me/CreationAIChat
+groupid: -1001626957256
+guide: https://ivan12341241.github.io/site-EM/res/guide.html
+
+model:
+  - name: Anime-cute
+    file: 777-03v2-fp16-no-ema
+    fileext: .safetensors
+    vae: sd-vae-ft-mse-original
+    vaeext: .safetensors
+    clipskip: 2
+
+# unrealized
+embedding: []
+
+controlpreprocess:
+  - name: none
+  - name: canny
+  - name: depth
+  - name: depth_leres
+  - name: hed
+  - name: hed_safe
+  - name: mediapipe_face
+  - name: mlsd
+  - name: normal_map
+  - name: openpose
+  - name: openpose_hand
+  - name: openpose_face
+  - name: openpose_faceonly
+  - name: openpose_full
+  - name: clip_vision
+  - name: color
+  - name: pidinet
+  - name: pidinet_safe
+  - name: pidinet_sketch
+  - name: pidinet_scribble
+  - name: scribble_xdog
+  - name: scribble_hed
+  - name: segmentation
+  - name: threshold
+  - name: depth_zoe
+  - name: normal_bae
+  - name: oneformer_coco
+  - name: oneformer_ade20k
+  - name: lineart
+  - name: lineart_coarse
+  - name: lineart_anime
+  - name: lineart_standard
+  - name: shuffle
+  - name: tile_gaussian
+  - name: invert
+  - name: lineart_anime_denoise
+  - name: reference_only
+  - name: inpaint
+
+controlprocess:
+  - name: canny-v1.1
+    file: control_v11p_sd15_canny
+    note:
+  - name: depth-v1.1
+    file: control_v11f1p_sd15_depth
+    note:
+  - name: mlsd-v1.1
+    file: control_v11p_sd15_mlsd
+    note:
+  - name: normalbae-v1.1
+    file: control_v11p_sd15_normalbae
+    note:
+  - name: openpose-v1.1
+    file: control_v11p_sd15_openpose
+    note:
+  - name: ip2p-v1.1
+    file: control_v11e_sd15_ip2p
+    note:
+  - name: tile-v1.1
+    file: control_v11f1e_sd15_tile
+    note:
+  - name: shuffle-v1.1
+    file: control_v11e_sd15_shuffle
+    note:
+  - name: inpaint-v1.1
+    file: control_v11p_sd15_inpaint
+    note:
+  - name: lineart-v1.1
+    file: control_v11p_sd15_lineart
+    note:
+  - name: scribble-v1.1
+    file: control_v11p_sd15_scribble
+    note:
+  - name: seg-v1.1
+    file: control_v11p_sd15_seg
+    note:
+  - name: softedge-v1.1
+    file: control_v11p_sd15_softedge
+    note:
+  - name: lineart anime-v1.1
+    file: control_v11p_sd15s2_lineart_anime
+    note:
+
+extramodel:
+  - name: Amber
+    nameext: .safetensors
+    preview: https://bucket-blog.pyhdxy.com/internal/image/avatar.jpg
+    type: lora
+    group:
+      - Genshin Impact
+    triggerwords:
+      - amber \(genshin impact\)
+      - brown eyes
+      - brown hair
+      - long hair
+      - red hair ribbon
