@@ -16,7 +16,7 @@ jobs:
                   xgo_version: latest
                   go_version: 1.19
                   dest: build
-                  targets: linux/arm64 linux/amd64 windows/amd64 darwin/amd64 darwin/arm64
+                  targets: linux/arm64,linux/amd64,windows/amd64,darwin/amd64,darwin/arm64
                   v: false
                   x: false
                   race: false
@@ -32,4 +32,3 @@ jobs:
                   prerelease: true
                   files: |
                     build/*
-                    *
