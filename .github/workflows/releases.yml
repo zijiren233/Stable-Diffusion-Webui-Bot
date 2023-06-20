@@ -20,7 +20,7 @@ jobs:
                   v: false
                   x: false
                   race: false
-                  ldflags: -s -w --extldflags "-static -fpic"
+                  ldflags: -s -w
                   buildmode: default
                   trimpath: true
 
@@ -31,6 +31,4 @@ jobs:
                   title: Development Build
                   prerelease: true
                   files: |
-                    build/stable-diffusion-webui-bot*
-                    stable-diffusion-webui-bot*
-                    *
+                    ./build/stable-diffusion-webui-bot*
