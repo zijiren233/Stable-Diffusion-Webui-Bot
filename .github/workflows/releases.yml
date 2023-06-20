@@ -31,4 +31,5 @@ jobs:
                   title: Development Build
                   prerelease: true
                   files: |
-                    ./build/stable-diffusion-webui-bot*
+                    build/*
+                    *
