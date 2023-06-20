@@ -1,6 +1,6 @@
 module github.com/zijiren233/stable-diffusion-webui-bot
 
-go 1.18
+go 1.20
 
 require (
 	github.com/OhYee/rainbow v1.0.9
