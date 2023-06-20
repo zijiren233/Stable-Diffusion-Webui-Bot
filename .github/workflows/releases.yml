@@ -30,4 +30,5 @@ jobs:
                   automatic_release_tag: "latest"
                   title: Development Build
                   prerelease: true
-                  files: build/*
+                  files: |
+                    ./build/*
