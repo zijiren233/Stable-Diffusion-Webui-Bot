@@ -24,10 +24,19 @@ var loadBalance = &api{
 	lock:    &sync.RWMutex{},
 }
 
-func GetWoker() (*sync.Map, chan *apiUrl, []*apiUrl) {
+func GetWoker() (m *sync.Map, c chan *apiUrl, a []*apiUrl) {
 	loadBalance.lock.RLock()
 	defer loadBalance.lock.RUnlock()
-	return *loadBalance.working, *loadBalance.apiPool, *loadBalance.apiList
+	if loadBalance.working != nil {
+		m = *loadBalance.working
+	}
+	if loadBalance.apiPool != nil {
+		c = *loadBalance.apiPool
+	}
+	if loadBalance.apiList != nil {
+		a = *loadBalance.apiList
+	}
+	return
 }
 
 type api struct {

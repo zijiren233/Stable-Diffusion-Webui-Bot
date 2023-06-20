@@ -89,6 +89,9 @@ func Main() {
 	if err != nil {
 		panic(err)
 	}
+	if len(gconfig.API()) == 0 {
+		colorlog.Warning("API list is empty")
+	}
 	api.Init(gconfig.API())
 	defer ants.Release()
 	mainPllo, _ = ants.NewPool(ants.DefaultAntsPoolSize, ants.WithOptions(ants.Options{ExpiryDuration: time.Minute, PreAlloc: false, Logger: nil, DisablePurge: false, Nonblocking: false, PanicHandler: func(i interface{}) {
