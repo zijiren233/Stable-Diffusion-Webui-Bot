@@ -24,21 +24,21 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func returnCallback(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery) {
-	bot.Request(tgbotapi.NewCallback(CallbackQuery.ID, ""))
+func (h *Handler) returnCallback(CallbackQuery *tgbotapi.CallbackQuery) {
+	h.bot.Request(tgbotapi.NewCallback(CallbackQuery.ID, ""))
 }
 
-func HandleCallback(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery) {
-	defer returnCallback(bot, CallbackQuery)
+func (h *Handler) HandleCallback(CallbackQuery *tgbotapi.CallbackQuery) {
+	defer h.returnCallback(CallbackQuery)
 	data := tgbotapi.ParseCbkData(CallbackQuery)
-	if ch, ok := bot.FindCbk(CallbackQuery.Message.Chat.ID, CallbackQuery.From.ID, CallbackQuery.Message.MessageID); ok {
+	if ch, ok := h.bot.FindCbk(CallbackQuery.Message.Chat.ID, CallbackQuery.From.ID, CallbackQuery.Message.MessageID); ok {
 		select {
 		case ch.Chan() <- data:
 		default:
 		}
 		return
 	}
-	u, err := user.LoadAndInitUser(bot, CallbackQuery.From.ID)
+	u, err := user.LoadAndInitUser(h.bot, CallbackQuery.From.ID)
 	if err != nil {
 		colorlog.Errorf("Load And Init User Err: %v", err)
 		return
@@ -47,46 +47,46 @@ func HandleCallback(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery)
 	default:
 		return
 	case "panel":
-		panel(bot, CallbackQuery, data, u)
+		h.panel(CallbackQuery, data, u)
 	case "default":
-		defaultPanel(bot, CallbackQuery, data, u)
+		h.defaultPanel(CallbackQuery, data, u)
 	case "setDft":
-		setDft(bot, CallbackQuery, data, u)
+		h.setDft(CallbackQuery, data, u)
 	case "share":
-		shareCbk(bot, CallbackQuery, data, u)
+		h.shareCbk(CallbackQuery, data, u)
 	case "setCfg":
-		setCfg(bot, CallbackQuery, data, u)
+		h.setCfg(CallbackQuery, data, u)
 	case "reDraw":
-		reDraw(bot, CallbackQuery, u)
+		h.reDraw(CallbackQuery, u)
 	case "editCfg":
-		editCfg(bot, CallbackQuery, data, u)
+		h.editCfg(CallbackQuery, data, u)
 	case "editImg":
-		editImg(bot, CallbackQuery, u)
+		h.editImg(CallbackQuery, u)
 	case "fineTune":
-		fineTune(bot, CallbackQuery, data.Value, u)
+		h.fineTune(CallbackQuery, data.Value, u)
 	case "openImageButton":
-		openImageButton(bot, CallbackQuery, data, u)
+		h.openImageButton(CallbackQuery, data, u)
 	case "spr":
-		superResolution(bot, CallbackQuery, data, u)
+		h.superResolution(CallbackQuery, data, u)
 	case "delete":
-		bot.Send(tgbotapi.NewDeleteMessage(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID))
+		h.bot.Send(tgbotapi.NewDeleteMessage(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID))
 	case "cmd-spr":
-		bot.Send(tgbotapi.NewDeleteMessage(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID))
+		h.bot.Send(tgbotapi.NewDeleteMessage(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID))
 	case "lang":
-		lang(bot, CallbackQuery, data, u)
+		h.lang(CallbackQuery, data, u)
 	case "helpLang":
-		helpLang(bot, CallbackQuery, data, u)
+		h.helpLang(CallbackQuery, data, u)
 	case "pool":
-		pool(bot, CallbackQuery, data, u)
+		h.pool(CallbackQuery, data, u)
 	}
 }
 
-func shareCbk(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.ChanData, u *user.UserInfo) {
+func (h *Handler) shareCbk(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.ChanData, u *user.UserInfo) {
 	if u.Permissions() != user.T_Subscribe {
 		msg := tgbotapi.NewMessage(CallbackQuery.Message.Chat.ID, fmt.Sprintf("%s\n%s", u.LoadLang("shareInfo"), u.LoadLang("mustShare")))
 		msg.ReplyToMessageID = CallbackQuery.Message.MessageID
 		msg.ReplyMarkup = goJoinButton(u)
-		bot.Send(msg)
+		h.bot.Send(msg)
 		return
 	}
 	i, err := strconv.ParseInt(data.Value, 10, 64)
@@ -106,64 +106,64 @@ func shareCbk(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data 
 	}
 	msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprintf("%s: %s", u.LoadLang("shareInfo"), option))
 	msg.ReplyMarkup = gShareButton(u)
-	bot.Send(msg)
+	h.bot.Send(msg)
 }
 
-func editCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.ChanData, u *user.UserInfo) {
+func (h *Handler) editCfg(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.ChanData, u *user.UserInfo) {
 	cfg := &Config{}
 	err := yaml.Unmarshal([]byte(CallbackQuery.Message.Text), cfg)
 	if err != nil {
 		colorlog.Error(err)
 		return
 	}
-	getConfig(bot, u, cfg, CallbackQuery.Message.MessageID)
+	h.getConfig(u, cfg, CallbackQuery.Message.MessageID)
 }
 
-func pool(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.ChanData, u *user.UserInfo) {
+func (h *Handler) pool(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.ChanData, u *user.UserInfo) {
 	if u.UserInfo.UserID != parseflag.OwnerID {
 		return
 	}
 	msg := tgbotapi.NewEditMessageTextAndMarkup(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprintf("```\npool: %d\nfree: %d\nwait: %d\ntime: %v\n```", api.DrawPoolCap(), api.DrawFree(), api.DrawWait(), time.Now().Format("01-02 15:04:05")), poolButton)
 	msg.ParseMode = "Markdown"
-	bot.Send(msg)
+	h.bot.Send(msg)
 }
 
-func helpLang(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.ChanData, u *user.UserInfo) {
+func (h *Handler) helpLang(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.ChanData, u *user.UserInfo) {
 	if err := u.SetLang(data.Value); err != nil {
 		colorlog.Errorf("Set Language err [%s] : %v", CallbackQuery.From.String(), err)
 	} else {
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprintf("%s\n\nYou Can Use Website\nUser ID: `%d`\nPassword: `%s`", u.LoadLang("help"), u.UserInfo.UserID, u.Passwd()))
 		msg.ParseMode = "Markdown"
-		msg.ReplyMarkup = &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: append(helpLangButton.InlineKeyboard, clictUrlButton(u, fmt.Sprintf("https://%s/login", parseflag.WEBSITE)).InlineKeyboard...)}
-		bot.Send(msg)
+		msg.ReplyMarkup = &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: append(helpLangButton.InlineKeyboard, clictUrlButton(u, fmt.Sprintf("https://%s/login", parseflag.APIHost)).InlineKeyboard...)}
+		h.bot.Send(msg)
 	}
 }
 
-func lang(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.ChanData, u *user.UserInfo) {
+func (h *Handler) lang(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.ChanData, u *user.UserInfo) {
 	if err := u.SetLang(data.Value); err != nil {
 		colorlog.Errorf("Set Language err [%s] : %v", CallbackQuery.From.String(), err)
 	} else {
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, u.LoadLang("setLangSuccess"))
 		msg.ReplyMarkup = langButton
-		bot.Send(msg)
+		h.bot.Send(msg)
 	}
 }
 
-func openImageButton(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.ChanData, u *user.UserInfo) {
+func (h *Handler) openImageButton(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.ChanData, u *user.UserInfo) {
 	spr, err := strconv.ParseBool(data.Value)
 	if err != nil {
 		return
 	}
 	msg := tgbotapi.NewEditMessageReplyMarkup(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, *imgButton(u, spr))
-	bot.Send(msg)
+	h.bot.Send(msg)
 }
 
-func defaultPanel(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.ChanData, u *user.UserInfo) {
+func (h *Handler) defaultPanel(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.ChanData, u *user.UserInfo) {
 	switch data.Value {
 	case "panel":
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, u.LoadLang("setDft"))
 		msg.ReplyMarkup = setDefaultCfg(u)
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "mode":
 		var msg tgbotapi.EditMessageTextConfig
 		if u.UserInfo.UserDefaultMODE == "" {
@@ -173,7 +173,7 @@ func defaultPanel(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, d
 			msg = tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprint(u.LoadLang("setDft"), " ", u.LoadLang("mode")))
 			msg.ReplyMarkup = generateSetDftMODEButton(u)
 		}
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "uc":
 		var msg tgbotapi.EditMessageTextConfig
 		if u.UserInfo.UserDefaultUC == "" {
@@ -183,7 +183,7 @@ func defaultPanel(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, d
 		}
 		msg.ReplyMarkup = generateSetDftUCButton(u)
 		msg.ParseMode = "Markdown"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "number":
 		var msg tgbotapi.EditMessageTextConfig
 		if u.UserInfo.UserDefaultNumber == 0 {
@@ -192,7 +192,7 @@ func defaultPanel(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, d
 			msg = tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprint(u.LoadLang("setDft"), " ", u.LoadLang("number")))
 		}
 		msg.ReplyMarkup = generateSetDftNumberButton(u)
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "scale":
 		var msg tgbotapi.EditMessageTextConfig
 		if u.UserInfo.UserDefaultScale == 0 {
@@ -201,7 +201,7 @@ func defaultPanel(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, d
 			msg = tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprintf("%s %s:\n%d", u.LoadLang("setDft"), u.LoadLang("scale"), u.UserInfo.UserDefaultScale))
 		}
 		msg.ReplyMarkup = generateSetDftScaleButton(u)
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "steps":
 		var msg tgbotapi.EditMessageTextConfig
 		if u.UserInfo.UserDefaultSteps == 0 {
@@ -210,11 +210,11 @@ func defaultPanel(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, d
 			msg = tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprintf("%s %s:\n%d", u.LoadLang("setDft"), u.LoadLang("steps"), u.UserInfo.UserDefaultSteps))
 		}
 		msg.ReplyMarkup = generateSetDftStepsButton(u)
-		bot.Send(msg)
+		h.bot.Send(msg)
 	}
 }
 
-func setDft(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.ChanData, u *user.UserInfo) {
+func (h *Handler) setDft(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.ChanData, u *user.UserInfo) {
 	before, after, found := strings.Cut(data.Value, ":")
 	data.Key = before
 	if found {
@@ -227,20 +227,20 @@ func setDft(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 		u.ChangeDefaultMODE(data.Value)
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprint(u.LoadLang("setDft"), " ", u.LoadLang("mode")))
 		msg.ReplyMarkup = generateSetDftMODEButton(u)
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "uc":
 		if data.Value == "reset" {
 			u.ChangeDefaultUC("")
 		} else {
-			m, err := bot.NewMsgCbk(CallbackQuery.Message.Chat.ID, CallbackQuery.From.ID)
+			m, err := h.bot.NewMsgCbk(CallbackQuery.Message.Chat.ID, CallbackQuery.From.ID)
 			if err != nil {
 				return
 			}
 			defer m.Close()
 			msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, u.LoadLang("sendTag"))
 			msg.ReplyMarkup = cancelButton(u)
-			bot.Send(msg)
-			c, err := bot.NewCbk(CallbackQuery.Message.Chat.ID, CallbackQuery.From.ID, CallbackQuery.Message.MessageID)
+			h.bot.Send(msg)
+			c, err := h.bot.NewCbk(CallbackQuery.Message.Chat.ID, CallbackQuery.From.ID, CallbackQuery.Message.MessageID)
 			if err != nil {
 				colorlog.Error(err)
 				return
@@ -265,7 +265,7 @@ func setDft(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 		}
 		msg.ParseMode = "Markdown"
 		msg.ReplyMarkup = generateSetDftUCButton(u)
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "number":
 		u2, err := strconv.ParseUint(data.Value, 10, 64)
 		if err != nil {
@@ -274,7 +274,7 @@ func setDft(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 		u.ChangeDefaultNumber(int(u2))
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprint(u.LoadLang("setDft"), " ", u.LoadLang("number")))
 		msg.ReplyMarkup = generateSetDftNumberButton(u)
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "scale":
 		if u.UserInfo.UserDefaultScale == 0 {
 			u.UserInfo.UserDefaultScale = api.DefaultCfgScale
@@ -287,7 +287,7 @@ func setDft(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 		}
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprintf("%s %s:\n%d", u.LoadLang("setDft"), u.LoadLang("scale"), u.UserInfo.UserDefaultScale))
 		msg.ReplyMarkup = generateSetDftScaleButton(u)
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "steps":
 		if u.UserInfo.UserDefaultSteps == 0 {
 			u.UserInfo.UserDefaultSteps = api.DefaultSteps
@@ -300,23 +300,23 @@ func setDft(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 		}
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprintf("%s %s:\n%d", u.LoadLang("setDft"), u.LoadLang("steps"), u.UserInfo.UserDefaultSteps))
 		msg.ReplyMarkup = generateSetDftStepsButton(u)
-		bot.Send(msg)
+		h.bot.Send(msg)
 	}
 }
 
-func editImg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, u *user.UserInfo) {
+func (h *Handler) editImg(CallbackQuery *tgbotapi.CallbackQuery, u *user.UserInfo) {
 	cfg := new(Config)
 	fileID := utils.GetFileNamePrefix(CallbackQuery.Message.Document.FileName)
 	var err error
 	var prePhoto []byte
-	prePhoto, err = cache.GetFile(fileID)
+	prePhoto, err = h.cache.Get(fileID)
 	if err != nil {
-		prePhoto, err = bot.GetFileData(CallbackQuery.Message.Document.FileID)
+		prePhoto, err = h.bot.GetFileData(CallbackQuery.Message.Document.FileID)
 		if err != nil {
 			colorlog.Error(err)
 			return
 		}
-		_, err := cache.Put(prePhoto)
+		_, err := h.cache.Put(prePhoto)
 		if err != nil {
 			colorlog.Errorf("Put file err: %v", err)
 			return
@@ -333,7 +333,7 @@ func editImg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, u *use
 	cfg.Strength = 0.6
 	cfg.Mode = "DDIM"
 	cfg.Seed = 0
-	getConfig(bot, u, cfg, CallbackQuery.Message.MessageID)
+	h.getConfig(u, cfg, CallbackQuery.Message.MessageID)
 }
 
 func getAllExtraModelName(tags, types string) (AllExtraModel []string) {
@@ -400,7 +400,7 @@ func getTagName(tag string) (name string, strength float64) {
 var reDefaultTag, _ = regexp.Compile(`^masterpiece$|^best quality$|^<lora:.*?:(-?\d+)(\.\d+)?>$|^<hypernet:.*?:(-?\d+)(\.\d+)?>$`)
 var reDefaultUc, _ = regexp.Compile(`^lowres$|^text$`)
 
-func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.ChanData, u *user.UserInfo) {
+func (h *Handler) setCfg(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.ChanData, u *user.UserInfo) {
 	before, after, found := strings.Cut(data.Value, ":")
 	data.Key = before
 	if found {
@@ -422,7 +422,7 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 			return
 		}
 		allTag := getAllTag(cfg.Tag, reDefaultTag)
-		bot.Send(tgbotapi.NewEditMessageReplyMarkup(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, *editTagButton(u, int(i), allTag, allTag)))
+		h.bot.Send(tgbotapi.NewEditMessageReplyMarkup(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, *editTagButton(u, int(i), allTag, allTag)))
 	case "changeTag":
 		i := strings.LastIndex(data.Value, ":")
 		page, err := strconv.ParseInt(data.Value[i+1:], 10, 64)
@@ -432,7 +432,7 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 		}
 		switch data.Value[:i] {
 		case "Happend", "Eappend", "reset":
-			m, err := bot.NewMsgCbk(CallbackQuery.Message.Chat.ID, CallbackQuery.From.ID)
+			m, err := h.bot.NewMsgCbk(CallbackQuery.Message.Chat.ID, CallbackQuery.From.ID)
 			if err != nil {
 				return
 			}
@@ -440,8 +440,8 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 			msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprintf("%s\n<pre># %s</pre>", cfg.Fomate2TgHTML(), parse2HTML(u.LoadLang("sendTag"))))
 			msg.ReplyMarkup = cancelButton(u)
 			msg.ParseMode = "HTML"
-			bot.Send(msg)
-			c, err := bot.NewCbk(CallbackQuery.Message.Chat.ID, CallbackQuery.From.ID, CallbackQuery.Message.MessageID)
+			h.bot.Send(msg)
+			c, err := h.bot.NewCbk(CallbackQuery.Message.Chat.ID, CallbackQuery.From.ID, CallbackQuery.Message.MessageID)
 			if err != nil {
 				colorlog.Error(err)
 				return
@@ -470,7 +470,7 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
 		msg.ReplyMarkup = editTagButton(u, int(page), allTag, allTag)
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 		return
 	case "sT":
 		i := strings.LastIndex(data.Value, ":")
@@ -499,7 +499,7 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
 		msg.ReplyMarkup = editTagButton(u, int(page), nowTag, purge(allTag, []func(string) string{strings.TrimSpace}, []interface{ MatchString(b string) bool }{reDefaultTag}))
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "T":
 		i := strings.LastIndex(data.Value, ":")
 		page, err := strconv.ParseInt(data.Value[i+1:], 10, 64)
@@ -543,7 +543,7 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
 		msg.ReplyMarkup = editTagButton(u, int(page), allTag, purge(allTag, []func(string) string{strings.TrimSpace}, []interface{ MatchString(b string) bool }{reDefaultTag}))
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "editUc":
 		i, err := strconv.ParseInt(data.Value, 10, 64)
 		if err != nil {
@@ -551,7 +551,7 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 			return
 		}
 		allUc := getAllTag(cfg.Uc, reDefaultUc)
-		bot.Send(tgbotapi.NewEditMessageReplyMarkup(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, *editUcButton(u, int(i), allUc, allUc)))
+		h.bot.Send(tgbotapi.NewEditMessageReplyMarkup(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, *editUcButton(u, int(i), allUc, allUc)))
 	case "changeUc":
 		i := strings.LastIndex(data.Value, ":")
 		page, err := strconv.ParseInt(data.Value[i+1:], 10, 64)
@@ -561,7 +561,7 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 		}
 		switch data.Value[:i] {
 		case "Happend", "Eappend", "reset":
-			m, err := bot.NewMsgCbk(CallbackQuery.Message.Chat.ID, CallbackQuery.From.ID)
+			m, err := h.bot.NewMsgCbk(CallbackQuery.Message.Chat.ID, CallbackQuery.From.ID)
 			if err != nil {
 				return
 			}
@@ -569,8 +569,8 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 			msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprintf("%s\n<pre># %s</pre>", cfg.Fomate2TgHTML(), parse2HTML(u.LoadLang("sendTag"))))
 			msg.ReplyMarkup = cancelButton(u)
 			msg.ParseMode = "HTML"
-			bot.Send(msg)
-			c, err := bot.NewCbk(CallbackQuery.Message.Chat.ID, CallbackQuery.From.ID, CallbackQuery.Message.MessageID)
+			h.bot.Send(msg)
+			c, err := h.bot.NewCbk(CallbackQuery.Message.Chat.ID, CallbackQuery.From.ID, CallbackQuery.Message.MessageID)
 			if err != nil {
 				colorlog.Error(err)
 				return
@@ -599,7 +599,7 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
 		msg.ReplyMarkup = editUcButton(u, int(page), allUc, allUc)
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 		return
 	case "sU":
 		i := strings.LastIndex(data.Value, ":")
@@ -628,7 +628,7 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
 		msg.ReplyMarkup = editUcButton(u, int(page), nowUc, purge(allUc, []func(string) string{strings.TrimSpace}, []interface{ MatchString(b string) bool }{reDefaultUc}))
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "uc":
 		i := strings.LastIndex(data.Value, ":")
 		page, err := strconv.ParseInt(data.Value[i+1:], 10, 64)
@@ -672,7 +672,7 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
 		msg.ReplyMarkup = editUcButton(u, int(page), allUc, purge(allUc, []func(string) string{strings.TrimSpace}, []interface{ MatchString(b string) bool }{reDefaultUc}))
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "sL":
 		group, after, ok := strings.Cut(data.Value, ":")
 		if !ok {
@@ -746,13 +746,13 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 				KeywordsRe: []string{fmt.Sprintf("<lora:%s:(-?\\d+)(\\.\\d+)?>", l.Name)},
 			})
 			if err == nil && len(photo) == 1 {
-				msg.WriteString(fmt.Sprintf("\n# <a href=\"https://%s/api/images/%s.png\">Preview</a>", parseflag.HOST, photo[0].FileID))
+				msg.WriteString(fmt.Sprintf("\n# <a href=\"https://%s/api/images/%s.png\">Preview</a>", parseflag.APIHost, photo[0].FileID))
 			}
 		}
 		tgMsg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, msg.String())
 		tgMsg.ReplyMarkup = generateExtraModelButton(u, int(page), int(groupIndex), getAllExtraModelName(cfg.Tag, l.Type))
 		tgMsg.ParseMode = "HTML"
-		bot.Send(tgMsg)
+		h.bot.Send(tgMsg)
 	case "L":
 		group, after, ok := strings.Cut(data.Value, ":")
 		if !ok {
@@ -840,13 +840,13 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 				KeywordsRe: []string{fmt.Sprintf("<%s:%s:(-?\\d+)(\\.\\d+)?>", l.Type, l.Name)},
 			})
 			if err == nil && len(photo) == 1 {
-				msg.WriteString(fmt.Sprintf("\n# <a href=\"https://%s/api/images/%s.png\">Preview</a>", parseflag.HOST, photo[0].FileID))
+				msg.WriteString(fmt.Sprintf("\n# <a href=\"https://%s/api/images/%s.png\">Preview</a>", parseflag.APIHost, photo[0].FileID))
 			}
 		}
 		tgMsg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, msg.String())
 		tgMsg.ParseMode = "HTML"
 		tgMsg.ReplyMarkup = generateExtraModelButton(u, int(page), int(groupIndex), getAllExtraModelName(cfg.Tag, l.Type))
-		bot.Send(tgMsg)
+		h.bot.Send(tgMsg)
 	case "extraModel":
 		i := strings.LastIndex(data.Value, ":")
 		group := data.Value[:i]
@@ -863,7 +863,7 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprintf("%s\n<pre># %s</pre>", cfg.Fomate2TgHTML(), parse2HTML(u.LoadLang("extraModelInfo"))))
 		msg.ReplyMarkup = generateExtraModelButton(u, int(page), int(groupIndex), getAllExtraModelName(cfg.Tag, `\w+`))
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "extraModelGroup":
 		page, err := strconv.ParseInt(data.Value, 10, 64)
 		if err != nil {
@@ -873,13 +873,13 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprintf("%s\n<pre># %s</pre>", cfg.Fomate2TgHTML(), parse2HTML(u.LoadLang("extraModelInfo"))))
 		msg.ReplyMarkup = generateAllExtraModelGroupButton(u, int(page))
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "resetSeed":
 		cfg.Seed = uint32(rand.Intn(math.MaxUint32))
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
 		msg.ReplyMarkup = panelButton(u, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32)
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "setImg":
 		if len(cfg.PrePhotoID) == 32 {
 			cfg.PrePhotoID = ""
@@ -887,15 +887,15 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 			msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
 			msg.ReplyMarkup = panelButton(u, false, len(cfg.ControlPhotoID) == 32)
 			msg.ParseMode = "HTML"
-			bot.Send(msg)
+			h.bot.Send(msg)
 			return
 		}
-		m, err := bot.NewMsgCbk(CallbackQuery.Message.Chat.ID, CallbackQuery.From.ID)
+		m, err := h.bot.NewMsgCbk(CallbackQuery.Message.Chat.ID, CallbackQuery.From.ID)
 		if err != nil {
 			return
 		}
 		defer m.Close()
-		c, err := bot.NewCbk(CallbackQuery.Message.Chat.ID, CallbackQuery.From.ID, CallbackQuery.Message.MessageID)
+		c, err := h.bot.NewCbk(CallbackQuery.Message.Chat.ID, CallbackQuery.From.ID, CallbackQuery.Message.MessageID)
 		if err != nil {
 			return
 		}
@@ -903,7 +903,7 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprintf("%s\n<pre># %s, %s</pre>", cfg.Fomate2TgHTML(), parse2HTML(u.LoadLang("setImgInfo")), parse2HTML(u.LoadLang("sendImg"))))
 		msg.ReplyMarkup = cancelButton(u)
 		msg.ParseMode = "HTML"
-		_, err = bot.Send(msg)
+		_, err = h.bot.Send(msg)
 		if err != nil {
 			return
 		}
@@ -924,24 +924,24 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 				latestPhoto := msg.Photo[len(msg.Photo)-1]
 				cfg.Width = latestPhoto.Width
 				cfg.Height = latestPhoto.Height
-				photo, err = bot.GetFileData(latestPhoto.FileID)
+				photo, err = h.bot.GetFileData(latestPhoto.FileID)
 				if err != nil {
 					colorlog.Errorf("Get photo err: %v", err)
 					break
 				}
-				fi, err := cache.Put(photo)
+				fi, err := h.cache.Put(photo)
 				if err != nil {
 					colorlog.Errorf("Put file err: %v", err)
 					break
 				}
-				cfg.PrePhotoID = fi.Md5
+				cfg.PrePhotoID = fi.FileID
 			} else if msg.Document != nil {
 				if _, ok := utils.InString(msg.Document.MimeType, avilableDocumentType); !ok {
 					colorlog.Errorf("Get photo err: %s", "document type is not avilable")
 					break
 				}
-				if photo, err = cache.GetFile(utils.GetFileNamePrefix(msg.Document.FileName)); err != nil {
-					photo, err = bot.GetFileData(msg.Document.FileID)
+				if photo, err = h.cache.Get(utils.GetFileNamePrefix(msg.Document.FileName)); err != nil {
+					photo, err = h.bot.GetFileData(msg.Document.FileID)
 					if err != nil {
 						colorlog.Errorf("Parse Photo err: %v", err)
 						break
@@ -952,19 +952,19 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 					colorlog.Errorf("Parse Photo err: %v", err)
 					break
 				}
-				fi, err := cache.Put(photo)
+				fi, err := h.cache.Put(photo)
 				if err != nil {
 					colorlog.Errorf("Put file err: %v", err)
 					break
 				}
-				cfg.PrePhotoID = fi.Md5
+				cfg.PrePhotoID = fi.FileID
 			}
 		}
 		cfg.Strength = 0.7
 		msg = tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
 		msg.ReplyMarkup = panelButton(u, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32)
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "setControl":
 		if len(cfg.ControlPhotoID) == 32 {
 			cfg.ControlPhotoID = ""
@@ -972,15 +972,15 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 			msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
 			msg.ReplyMarkup = panelButton(u, false, len(cfg.ControlPhotoID) == 32)
 			msg.ParseMode = "HTML"
-			bot.Send(msg)
+			h.bot.Send(msg)
 			return
 		}
-		m, err := bot.NewMsgCbk(CallbackQuery.Message.Chat.ID, CallbackQuery.From.ID)
+		m, err := h.bot.NewMsgCbk(CallbackQuery.Message.Chat.ID, CallbackQuery.From.ID)
 		if err != nil {
 			return
 		}
 		defer m.Close()
-		c, err := bot.NewCbk(CallbackQuery.Message.Chat.ID, CallbackQuery.From.ID, CallbackQuery.Message.MessageID)
+		c, err := h.bot.NewCbk(CallbackQuery.Message.Chat.ID, CallbackQuery.From.ID, CallbackQuery.Message.MessageID)
 		if err != nil {
 			return
 		}
@@ -988,7 +988,7 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprintf("%s\n<pre># %s, %s</pre>", cfg.Fomate2TgHTML(), parse2HTML(u.LoadLang("setImgInfo")), parse2HTML(u.LoadLang("sendImg"))))
 		msg.ReplyMarkup = cancelButton(u)
 		msg.ParseMode = "HTML"
-		_, err = bot.Send(msg)
+		_, err = h.bot.Send(msg)
 		if err != nil {
 			return
 		}
@@ -999,13 +999,13 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 			msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
 			msg.ReplyMarkup = panelButton(u, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32)
 			msg.ParseMode = "HTML"
-			bot.Send(msg)
+			h.bot.Send(msg)
 			return
 		case <-c.Chan():
 			msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
 			msg.ReplyMarkup = panelButton(u, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32)
 			msg.ParseMode = "HTML"
-			bot.Send(msg)
+			h.bot.Send(msg)
 			return
 		case msg, ok := <-m.MsgChan():
 			m.Close()
@@ -1015,41 +1015,41 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 			var photo []byte
 			if len(msg.Photo) > 0 {
 				latestPhoto := msg.Photo[len(msg.Photo)-1]
-				photo, err = bot.GetFileData(latestPhoto.FileID)
+				photo, err = h.bot.GetFileData(latestPhoto.FileID)
 				if err != nil {
 					colorlog.Errorf("Get photo err: %v", err)
 					break
 				}
-				fi, err := cache.Put(photo)
+				fi, err := h.cache.Put(photo)
 				if err != nil {
 					colorlog.Errorf("Put file err: %v", err)
 					break
 				}
-				cfg.ControlPhotoID = fi.Md5
+				cfg.ControlPhotoID = fi.FileID
 			} else if msg.Document != nil {
 				if _, ok := utils.InString(msg.Document.MimeType, avilableDocumentType); !ok {
 					colorlog.Errorf("Get photo err: %s", "document type is not avilable")
 					break
 				}
-				if photo, err = cache.GetFile(utils.GetFileNamePrefix(msg.Document.FileName)); err != nil {
-					photo, err = bot.GetFileData(msg.Document.FileID)
+				if photo, err = h.cache.Get(utils.GetFileNamePrefix(msg.Document.FileName)); err != nil {
+					photo, err = h.bot.GetFileData(msg.Document.FileID)
 					if err != nil {
 						colorlog.Errorf("Parse Photo err: %v", err)
 						break
 					}
 				}
 				var fi cache.FileInfo
-				fi, err = cache.Put(photo)
+				fi, err = h.cache.Put(photo)
 				if err != nil {
 					colorlog.Errorf("Put file err: %v", err)
 					break
 				}
-				cfg.ControlPhotoID = fi.Md5
+				cfg.ControlPhotoID = fi.FileID
 			} else {
 				msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
 				msg.ReplyMarkup = panelButton(u, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32)
 				msg.ParseMode = "HTML"
-				bot.Send(msg)
+				h.bot.Send(msg)
 				return
 			}
 			if len(cfg.PrePhotoID) != 32 {
@@ -1058,7 +1058,7 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 					msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
 					msg.ReplyMarkup = panelButton(u, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32)
 					msg.ParseMode = "HTML"
-					bot.Send(msg)
+					h.bot.Send(msg)
 					return
 				}
 				cfg.Width = width
@@ -1069,30 +1069,30 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 		msg = tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
 		msg.ReplyMarkup = editControlButton(u)
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "editControl":
-		bot.Send(tgbotapi.NewEditMessageReplyMarkup(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, *editControlButton(u)))
+		h.bot.Send(tgbotapi.NewEditMessageReplyMarkup(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, *editControlButton(u)))
 	case "controlPreprocess":
-		bot.Send(tgbotapi.NewEditMessageReplyMarkup(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, *controlPreprocessButton(u, cfg.ControlPreprocess)))
+		h.bot.Send(tgbotapi.NewEditMessageReplyMarkup(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, *controlPreprocessButton(u, cfg.ControlPreprocess)))
 	case "controlProcess":
-		bot.Send(tgbotapi.NewEditMessageReplyMarkup(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, *controlProcessButton(cfg.ControlProcess)))
+		h.bot.Send(tgbotapi.NewEditMessageReplyMarkup(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, *controlProcessButton(cfg.ControlProcess)))
 	case "preprocess":
 		cfg.ControlPreprocess = data.Value
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
 		msg.ReplyMarkup = editControlButton(u)
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "process":
 		cfg.ControlProcess = data.Value
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
 		msg.ReplyMarkup = editControlButton(u)
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "confirm":
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
 		msg.ReplyMarkup = panelButton(u, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32)
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "sizeType":
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprintf("%s\n<pre># %s</pre>", cfg.Fomate2TgHTML(), parse2HTML(fmt.Sprintf("%d * %d = %d (Min: H*W>=64*64, Max: H*W<= %d [Unsponsored maximum Size is %d])", cfg.Width, cfg.Height, cfg.Width*cfg.Height, parseflag.ImgMaxSize, GuestImgMaxSize))))
 		msg.ParseMode = "HTML"
@@ -1114,7 +1114,7 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 		case "custom":
 			msg.ReplyMarkup = custonSizeButton(u)
 		}
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "custonSize":
 		i, err := strconv.ParseInt(data.Value[2:], 10, 64)
 		if err != nil {
@@ -1147,7 +1147,7 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprintf("%s\n<pre># %s</pre>", cfg.Fomate2TgHTML(), parse2HTML(fmt.Sprintf("%d * %d = %d (Min: H*W>=64*64, Max: H*W<= %d [Unsponsored maximum Size is %d])", cfg.Width, cfg.Height, cfg.Width*cfg.Height, parseflag.ImgMaxSize, GuestImgMaxSize))))
 		msg.ReplyMarkup = custonSizeButton(u)
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "size":
 		Width, Height, f := strings.Cut(data.Value, "*")
 		if f {
@@ -1164,7 +1164,7 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
 		msg.ReplyMarkup = panelButton(u, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32)
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "num":
 		i, err := strconv.ParseInt(data.Value, 10, 64)
 		if err != nil {
@@ -1175,13 +1175,13 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
 		msg.ReplyMarkup = panelButton(u, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32)
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "mode":
 		cfg.Mode = data.Value
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
 		msg.ReplyMarkup = panelButton(u, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32)
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "strength":
 		switch data.Value[:1] {
 		case "+":
@@ -1212,7 +1212,7 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprintf("%s\n<pre># %s</pre>", cfg.Fomate2TgHTML(), parse2HTML(u.LoadLang("strengthInfo"))))
 		msg.ReplyMarkup = strengthButton(u)
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "scale":
 		v, err := strconv.ParseInt(data.Value[1:], 10, 64)
 		if err != nil {
@@ -1235,13 +1235,13 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprintf("%s\n<pre># %s</pre>", cfg.Fomate2TgHTML(), parse2HTML(u.LoadLang("scaleInfo"))))
 		msg.ReplyMarkup = scaleButton(u)
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "model":
 		cfg.Model = data.Value
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
 		msg.ReplyMarkup = panelButton(u, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32)
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "steps":
 		v, err := strconv.ParseInt(data.Value[1:], 10, 64)
 		if err != nil {
@@ -1265,16 +1265,16 @@ func setCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *t
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprintf("%s\n<pre># %s %s</pre>", cfg.Fomate2TgHTML(), parse2HTML(u.LoadLang("stepsInfo")), parse2HTML("(Min: 15, Max: 50 [Unsponsored maximum Steps is 28])")))
 		msg.ReplyMarkup = stepsButton(u)
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "cancel":
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
 		msg.ReplyMarkup = panelButton(u, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32)
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	}
 }
 
-func panel(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.ChanData, u *user.UserInfo) {
+func (h *Handler) panel(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.ChanData, u *user.UserInfo) {
 	cfg := &Config{}
 	err := yaml.Unmarshal([]byte(CallbackQuery.Message.Text), cfg)
 	if err != nil {
@@ -1292,63 +1292,63 @@ func panel(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *tg
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
 		msg.ReplyMarkup = reDrawButton(u)
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
-		photo, err := cache.GetFile(cfg.PrePhotoID)
+		h.bot.Send(msg)
+		photo, err := h.cache.Get(cfg.PrePhotoID)
 		if err != nil {
 			colorlog.Error(err)
 			return
 		}
-		controlPhoto, err := cache.GetFile(cfg.ControlPhotoID)
+		controlPhoto, err := h.cache.Get(cfg.ControlPhotoID)
 		if err != nil {
 			colorlog.Error(err)
 			return
 		}
-		drawAndSend(bot, u, CallbackQuery.Message.MessageID, cfg, photo, controlPhoto, false)
+		h.drawAndSend(u, CallbackQuery.Message.MessageID, cfg, photo, controlPhoto, false)
 		return
 	case "size":
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprintf("%s\n<pre># %s</pre>", cfg.Fomate2TgHTML(), parse2HTML(fmt.Sprintf("%d * %d = %d (Min: H*W>=64*64, Max: H*W<= %d [Unsponsored maximum Size is %d])", cfg.Width, cfg.Height, cfg.Width*cfg.Height, parseflag.ImgMaxSize, GuestImgMaxSize))))
 		msg.ReplyMarkup = sizeTypeButton(u)
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "num":
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprintf("%s\n<pre># %s</pre>", cfg.Fomate2TgHTML(), parse2HTML(u.LoadLang("freeMaxNum"))))
 		msg.ReplyMarkup = generateNUMButton(cfg.Num)
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "mode":
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprintf("%s\n<pre># %s</pre>", cfg.Fomate2TgHTML(), parse2HTML(u.LoadLang("modeInfo"))))
 		msg.ReplyMarkup = generateMODEButton(cfg.Mode)
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "strength":
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprintf("%s\n<pre># %s</pre>", cfg.Fomate2TgHTML(), parse2HTML(u.LoadLang("strengthInfo"))))
 		msg.ReplyMarkup = strengthButton(u)
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "scale":
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprintf("%s\n<pre># %s</pre>", cfg.Fomate2TgHTML(), parse2HTML(u.LoadLang("scaleInfo"))))
 		msg.ReplyMarkup = scaleButton(u)
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "model":
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprintf("%s\n<pre># %s</pre>", cfg.Fomate2TgHTML(), parse2HTML(u.LoadLang("modelInfo"))))
 		msg.ReplyMarkup = generateModelButton(cfg.Model)
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	case "steps":
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprintf("%s\n<pre># %s %s</pre>", cfg.Fomate2TgHTML(), parse2HTML(u.LoadLang("stepsInfo")), parse2HTML("(Min: 15, Max: 50 [Unsponsored maximum Steps is 28])")))
 		msg.ReplyMarkup = stepsButton(u)
 		msg.ParseMode = "HTML"
-		bot.Send(msg)
+		h.bot.Send(msg)
 	}
 }
 
-func superResolution(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.ChanData, u *user.UserInfo) {
+func (h *Handler) superResolution(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.ChanData, u *user.UserInfo) {
 	if u.Permissions() == user.T_Prohibit {
-		msg := tgbotapi.NewMessage(u.ChatMember.User.ID, u.ProhibitString(bot))
+		msg := tgbotapi.NewMessage(u.ChatMember.User.ID, u.ProhibitString(h.bot))
 		msg.ReplyMarkup = goJoinButton(u)
 		msg.ReplyToMessageID = CallbackQuery.Message.MessageID
-		bot.Send(msg)
+		h.bot.Send(msg)
 		return
 	}
 	if CallbackQuery.Message.Document == nil || CallbackQuery.Message.Document.FileID == "" {
@@ -1366,14 +1366,14 @@ func superResolution(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery
 	cfg := new(Config)
 	md5 := utils.GetFileNamePrefix(CallbackQuery.Message.Document.FileName)
 	var prePhoto []byte
-	prePhoto, err = cache.GetFile(md5)
+	prePhoto, err = h.cache.Get(md5)
 	if err != nil {
-		prePhoto, err = bot.GetFileData(CallbackQuery.Message.Document.FileID)
+		prePhoto, err = h.bot.GetFileData(CallbackQuery.Message.Document.FileID)
 		if err != nil {
 			colorlog.Error(err)
 			return
 		}
-		_, err := cache.Put(prePhoto)
+		_, err := h.cache.Put(prePhoto)
 		if err != nil {
 			colorlog.Errorf("Put file err: %v", err)
 		}
@@ -1385,15 +1385,15 @@ func superResolution(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery
 		colorlog.Error(err)
 		return
 	}
-	superResolutionRun(bot, u, CallbackQuery.Message.MessageID, cfg, prePhoto, int(resize))
+	h.superResolutionRun(u, CallbackQuery.Message.MessageID, cfg, prePhoto, int(resize))
 }
 
-func fineTune(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, Strings string, u *user.UserInfo) {
+func (h *Handler) fineTune(CallbackQuery *tgbotapi.CallbackQuery, Strings string, u *user.UserInfo) {
 	if u.Permissions() == user.T_Prohibit {
-		msg := tgbotapi.NewMessage(u.ChatMember.User.ID, u.ProhibitString(bot))
+		msg := tgbotapi.NewMessage(u.ChatMember.User.ID, u.ProhibitString(h.bot))
 		msg.ReplyMarkup = goJoinButton(u)
 		msg.ReplyToMessageID = CallbackQuery.Message.MessageID
-		bot.Send(msg)
+		h.bot.Send(msg)
 		return
 	}
 	if CallbackQuery.Message.Document == nil || CallbackQuery.Message.Document.FileID == "" {
@@ -1407,14 +1407,14 @@ func fineTune(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, Strin
 	cfg := new(Config)
 	fileID := utils.GetFileNamePrefix(CallbackQuery.Message.Document.FileName)
 	var prePhoto []byte
-	prePhoto, err = cache.GetFile(fileID)
+	prePhoto, err = h.cache.Get(fileID)
 	if err != nil {
-		prePhoto, err = bot.GetFileData(CallbackQuery.Message.Document.FileID)
+		prePhoto, err = h.bot.GetFileData(CallbackQuery.Message.Document.FileID)
 		if err != nil {
 			colorlog.Error(err)
 			return
 		}
-		_, err := cache.Put(prePhoto)
+		_, err := h.cache.Put(prePhoto)
 		if err != nil {
 			colorlog.Errorf("Put file err: %v", err)
 		}
@@ -1442,15 +1442,15 @@ func fineTune(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, Strin
 	}
 	cfg.Seed = 0
 	cfg.CorrectCfg(u, false, false, false, false, true)
-	drawAndSend(bot, u, CallbackQuery.Message.MessageID, cfg, prePhoto, nil, false)
+	h.drawAndSend(u, CallbackQuery.Message.MessageID, cfg, prePhoto, nil, false)
 }
 
-func reDraw(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, u *user.UserInfo) {
+func (h *Handler) reDraw(CallbackQuery *tgbotapi.CallbackQuery, u *user.UserInfo) {
 	if u.Permissions() == user.T_Prohibit {
-		msg := tgbotapi.NewMessage(u.ChatMember.User.ID, u.ProhibitString(bot))
+		msg := tgbotapi.NewMessage(u.ChatMember.User.ID, u.ProhibitString(h.bot))
 		msg.ReplyMarkup = goJoinButton(u)
 		msg.ReplyToMessageID = CallbackQuery.Message.MessageID
-		bot.Send(msg)
+		h.bot.Send(msg)
 		return
 	}
 	task, err := u.AddTask(user.T_Draw)
@@ -1462,7 +1462,7 @@ func reDraw(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, u *user
 	if yaml.Unmarshal([]byte(CallbackQuery.Message.Text), cfg) == nil {
 		var prePhoto []byte
 		if len(cfg.PrePhotoID) == 32 {
-			prePhoto, err = cache.GetFile(cfg.PrePhotoID)
+			prePhoto, err = h.cache.Get(cfg.PrePhotoID)
 			if err != nil {
 				colorlog.Error(err)
 				return
@@ -1470,7 +1470,7 @@ func reDraw(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, u *user
 		}
 		var controlPhoto []byte
 		if len(cfg.ControlPhotoID) == 32 {
-			controlPhoto, err = cache.GetFile(cfg.ControlPhotoID)
+			controlPhoto, err = h.cache.Get(cfg.ControlPhotoID)
 			if err != nil {
 				colorlog.Error(err)
 				return
@@ -1482,11 +1482,11 @@ func reDraw(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, u *user
 		mc.ReplyMarkup = reDrawButton(u)
 		mc.ParseMode = "HTML"
 		mc.ReplyToMessageID = CallbackQuery.Message.MessageID
-		m, err := bot.Send(mc)
+		m, err := h.bot.Send(mc)
 		if err != nil {
 			colorlog.Error(err)
 			return
 		}
-		drawAndSend(bot, u, m.MessageID, cfg, prePhoto, controlPhoto, false)
+		h.drawAndSend(u, m.MessageID, cfg, prePhoto, controlPhoto, false)
 	}
 }

@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zijiren233/stable-diffusion-webui-bot/cache"
 	"github.com/zijiren233/stable-diffusion-webui-bot/db"
 	parseflag "github.com/zijiren233/stable-diffusion-webui-bot/flag"
 	"github.com/zijiren233/stable-diffusion-webui-bot/gconfig"
@@ -326,7 +325,7 @@ func testDrawConfig(ctx *gin.Context) {
 // @Success      200  {object}  Resp
 // @Failure      500  {object}  Resp
 // @Router       /draw [post]
-func drawPost(ctx *gin.Context) {
+func (r *Router) drawPost(ctx *gin.Context) {
 	u, exists := ctx.Get("user")
 	if !exists {
 		authErr(ctx)
@@ -336,7 +335,7 @@ func drawPost(ctx *gin.Context) {
 	if UserInfo.Permissions() == user.T_Prohibit {
 		ctx.JSON(http.StatusInternalServerError, Resp{
 			Time: time.Now().Unix(),
-			Err:  UserInfo.ProhibitString(bot),
+			Err:  UserInfo.ProhibitString(r.handler.Bot()),
 		})
 		ctx.Abort()
 		return
@@ -419,7 +418,7 @@ func drawPost(ctx *gin.Context) {
 // @Success      200  {object}  Resp
 // @Failure      500  {object}  Resp
 // @Router       /draw [get]
-func drawGet(ctx *gin.Context) {
+func (r *Router) drawGet(ctx *gin.Context) {
 	u, exists := ctx.Get("user")
 	if !exists {
 		authErr(ctx)
@@ -429,7 +428,7 @@ func drawGet(ctx *gin.Context) {
 	if UserInfo.Permissions() == user.T_Prohibit {
 		ctx.JSON(http.StatusInternalServerError, Resp{
 			Time: time.Now().Unix(),
-			Err:  UserInfo.ProhibitString(bot),
+			Err:  UserInfo.ProhibitString(r.handler.Bot()),
 		})
 		ctx.Abort()
 		return
@@ -485,7 +484,7 @@ func drawGet(ctx *gin.Context) {
 // @Success      200  {object}  Resp
 // @Failure      500  {object}  Resp
 // @Router       /interrupt [get]
-func interrupt(ctx *gin.Context) {
+func (r *Router) interrupt(ctx *gin.Context) {
 	u, exists := ctx.Get("user")
 	if !exists {
 		authErr(ctx)
@@ -495,7 +494,7 @@ func interrupt(ctx *gin.Context) {
 	if UserInfo.Permissions() == user.T_Prohibit {
 		ctx.JSON(http.StatusInternalServerError, Resp{
 			Time: time.Now().Unix(),
-			Err:  UserInfo.ProhibitString(bot),
+			Err:  UserInfo.ProhibitString(r.handler.Bot()),
 		})
 		ctx.Abort()
 		return
@@ -534,7 +533,7 @@ type CtrlPhotoCfg struct {
 // @Success      200  {object}  Resp
 // @Failure      500  {object}  Resp
 // @Router       /detect-ctrl-photo [post]
-func detectCtrlPhotoPost(ctx *gin.Context) {
+func (r *Router) detectCtrlPhotoPost(ctx *gin.Context) {
 	u, exists := ctx.Get("user")
 	if !exists {
 		authErr(ctx)
@@ -544,7 +543,7 @@ func detectCtrlPhotoPost(ctx *gin.Context) {
 	if UserInfo.Permissions() == user.T_Prohibit {
 		ctx.JSON(http.StatusInternalServerError, Resp{
 			Time: time.Now().Unix(),
-			Err:  UserInfo.ProhibitString(bot),
+			Err:  UserInfo.ProhibitString(r.handler.Bot()),
 		})
 		ctx.Abort()
 		return
@@ -604,7 +603,7 @@ func detectCtrlPhotoPost(ctx *gin.Context) {
 // @Success      200  {object}  Resp
 // @Failure      500  {object}  Resp
 // @Router       /detect-ctrl-photo [get]
-func detectCtrlPhotoGet(ctx *gin.Context) {
+func (r *Router) detectCtrlPhotoGet(ctx *gin.Context) {
 	u, exists := ctx.Get("user")
 	if !exists {
 		authErr(ctx)
@@ -614,7 +613,7 @@ func detectCtrlPhotoGet(ctx *gin.Context) {
 	if UserInfo.Permissions() == user.T_Prohibit {
 		ctx.JSON(http.StatusInternalServerError, Resp{
 			Time: time.Now().Unix(),
-			Err:  UserInfo.ProhibitString(bot),
+			Err:  UserInfo.ProhibitString(r.handler.Bot()),
 		})
 		ctx.Abort()
 		return
@@ -676,7 +675,7 @@ type SuperResolutionCfg struct {
 // @Success      200  {object}  Resp
 // @Failure      500  {object}  Resp
 // @Router       /super-resolution [post]
-func superResolutionPost(ctx *gin.Context) {
+func (r *Router) superResolutionPost(ctx *gin.Context) {
 	u, exists := ctx.Get("user")
 	if !exists {
 		authErr(ctx)
@@ -686,7 +685,7 @@ func superResolutionPost(ctx *gin.Context) {
 	if UserInfo.Permissions() == user.T_Prohibit {
 		ctx.JSON(http.StatusInternalServerError, Resp{
 			Time: time.Now().Unix(),
-			Err:  UserInfo.ProhibitString(bot),
+			Err:  UserInfo.ProhibitString(r.handler.Bot()),
 		})
 		ctx.Abort()
 		return
@@ -759,7 +758,7 @@ func superResolutionPost(ctx *gin.Context) {
 // @Success      200  {object}  Resp
 // @Failure      500  {object}  Resp
 // @Router       /super-resolution [get]
-func superResolutionGet(ctx *gin.Context) {
+func (r *Router) superResolutionGet(ctx *gin.Context) {
 	u, exists := ctx.Get("user")
 	if !exists {
 		authErr(ctx)
@@ -769,7 +768,7 @@ func superResolutionGet(ctx *gin.Context) {
 	if UserInfo.Permissions() == user.T_Prohibit {
 		ctx.JSON(http.StatusInternalServerError, Resp{
 			Time: time.Now().Unix(),
-			Err:  UserInfo.ProhibitString(bot),
+			Err:  UserInfo.ProhibitString(r.handler.Bot()),
 		})
 		ctx.Abort()
 		return
@@ -894,13 +893,13 @@ func searchImages(ctx *gin.Context) {
 	for _, v := range photo {
 		switch ctx.Query("cfg_type") {
 		case "json":
-			resp = append(resp, Result{Id: v.FileID, Image: fmt.Sprintf("https://%s/api/images/%s.png", parseflag.HOST, v.FileID), Cfg: handler.Config{DrawConfig: v.Config, PrePhotoID: v.PrePhotoID, ControlPhotoID: v.ControlPhotoID}, Width: 230, Height: int(float64(v.Config.Height) / float64(v.Config.Width) * 230)})
+			resp = append(resp, Result{Id: v.FileID, Image: fmt.Sprintf("https://%s/api/images/%s.png", parseflag.APIHost, v.FileID), Cfg: handler.Config{DrawConfig: v.Config, PrePhotoID: v.PrePhotoID, ControlPhotoID: v.ControlPhotoID}, Width: 230, Height: int(float64(v.Config.Height) / float64(v.Config.Width) * 230)})
 		default:
 			cfg, err := yaml.Marshal(handler.Config{DrawConfig: v.Config, PrePhotoID: v.PrePhotoID, ControlPhotoID: v.ControlPhotoID})
 			if err != nil {
 				continue
 			}
-			resp = append(resp, Result{Id: v.FileID, Image: fmt.Sprintf("https://%s/api/images/%s.png", parseflag.HOST, v.FileID), Cfg: string(cfg), Width: 230, Height: int(float64(v.Config.Height) / float64(v.Config.Width) * 230)})
+			resp = append(resp, Result{Id: v.FileID, Image: fmt.Sprintf("https://%s/api/images/%s.png", parseflag.APIHost, v.FileID), Cfg: string(cfg), Width: 230, Height: int(float64(v.Config.Height) / float64(v.Config.Width) * 230)})
 		}
 	}
 	ctx.JSON(http.StatusOK, Resp{Time: time.Now().Unix(), Data: ImagesData{
@@ -991,13 +990,13 @@ func searchUserImages(ctx *gin.Context) {
 	for _, v := range photo {
 		switch ctx.Query("cfg_type") {
 		case "json":
-			resp = append(resp, Result{Id: v.FileID, Image: fmt.Sprintf("https://%s/api/images/%s.png", parseflag.HOST, v.FileID), Cfg: handler.Config{DrawConfig: v.Config, PrePhotoID: v.PrePhotoID, ControlPhotoID: v.ControlPhotoID}, Width: 230, Height: int(float64(v.Config.Height) / float64(v.Config.Width) * 230)})
+			resp = append(resp, Result{Id: v.FileID, Image: fmt.Sprintf("https://%s/api/images/%s.png", parseflag.APIHost, v.FileID), Cfg: handler.Config{DrawConfig: v.Config, PrePhotoID: v.PrePhotoID, ControlPhotoID: v.ControlPhotoID}, Width: 230, Height: int(float64(v.Config.Height) / float64(v.Config.Width) * 230)})
 		default:
 			cfg, err := yaml.Marshal(handler.Config{DrawConfig: v.Config, PrePhotoID: v.PrePhotoID, ControlPhotoID: v.ControlPhotoID})
 			if err != nil {
 				continue
 			}
-			resp = append(resp, Result{Id: v.FileID, Image: fmt.Sprintf("https://%s/api/images/%s.png", parseflag.HOST, v.FileID), Cfg: string(cfg), Width: 230, Height: int(float64(v.Config.Height) / float64(v.Config.Width) * 230)})
+			resp = append(resp, Result{Id: v.FileID, Image: fmt.Sprintf("https://%s/api/images/%s.png", parseflag.APIHost, v.FileID), Cfg: string(cfg), Width: 230, Height: int(float64(v.Config.Height) / float64(v.Config.Width) * 230)})
 		}
 	}
 	ctx.JSON(http.StatusOK, Resp{Time: time.Now().Unix(), Data: ImagesData{
@@ -1016,12 +1015,12 @@ var imgL = rate.NewLimiter(30, 1)
 // @Success      200  {object}  Resp
 // @Failure      500  {object}  Resp
 // @Router       /images/{filename} [get]
-func Images(ctx *gin.Context) {
+func (r *Router) Images(ctx *gin.Context) {
 	imgL.Wait(ctx)
 	filename := strings.Trim(ctx.Param("filename"), "/")
 	id := strings.TrimSuffix(filename, `.png`)
 	if strings.HasSuffix(filename, `.png`) && len(id) == 32 {
-		data, err := cache.GetFile(id)
+		data, err := r.handler.Cache().Get(id)
 		if err != nil {
 			colorlog.Errorf("website err: %v", err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "failed to get file: object not found", "data": nil})

@@ -2,10 +2,11 @@ package router
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 
 	_ "github.com/zijiren233/stable-diffusion-webui-bot/docs"
-	tgbotapi "github.com/zijiren233/tg-bot-api/v6"
+	"github.com/zijiren233/stable-diffusion-webui-bot/handler"
 	"golang.org/x/time/rate"
 
 	"github.com/gin-gonic/gin"
@@ -34,14 +35,14 @@ func log(params gin.LogFormatterParams) string {
 	))
 }
 
-func collectRoute(eng *gin.Engine) *gin.Engine {
-	eng.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	return eng
+func (r *Router) regDocs() *gin.Engine {
+	rg := r.eng.Group("/docs")
+	rg.Use(gin.LoggerWithFormatter(log))
+	rg.GET("/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	return r.eng
 }
 
 var dataBucket = rate.NewLimiter(30, 1)
-var eng *gin.Engine
-var bot *tgbotapi.BotAPI
 
 type Result struct {
 	Id     string `json:"id"`
@@ -51,20 +52,48 @@ type Result struct {
 	Cfg    any    `json:"cfg"`
 }
 
-func init() {
-	gin.SetMode(gin.ReleaseMode)
-	eng = gin.New()
+type Router struct {
+	eng            *gin.Engine
+	handler        *handler.Handler
+	api            bool
+	docs           bool
+	webhookHandler func(w http.ResponseWriter, r *http.Request)
+	webhookUriPath string
 }
 
-func SetBot(b *tgbotapi.BotAPI) {
-	bot = b
+type ConfigFunc func(r *Router)
+
+func WithAPI(handler *handler.Handler) ConfigFunc {
+	return func(r *Router) { r.api = true; r.handler = handler }
 }
 
-func Router() {
-	apis(eng)
-	collectRoute(eng)
+func WithDocs() ConfigFunc {
+	return func(r *Router) { r.docs = true }
 }
 
-func Eng() *gin.Engine {
-	return eng
+func WithWebhook(webhookUriPath string, webhookHandler func(w http.ResponseWriter, r *http.Request)) ConfigFunc {
+	return func(r *Router) { r.webhookHandler = webhookHandler; r.webhookUriPath = webhookUriPath }
+}
+
+func New(eng *gin.Engine, config ...ConfigFunc) *Router {
+	r := &Router{eng: eng}
+	for _, cf := range config {
+		cf(r)
+	}
+	if r.api {
+		r.apis()
+	}
+	if r.docs {
+		r.regDocs()
+	}
+	if r.webhookHandler != nil {
+		eng.POST(r.webhookUriPath, func(ctx *gin.Context) {
+			r.webhookHandler(ctx.Writer, ctx.Request)
+		})
+	}
+	return r
+}
+
+func (r *Router) Eng() *gin.Engine {
+	return r.eng
 }

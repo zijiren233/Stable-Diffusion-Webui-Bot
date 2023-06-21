@@ -4,3 +4,4 @@ stable-diffusion-webui-bot.db
 config.yaml
 logs
 i18n-extra
+local-cache

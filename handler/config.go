@@ -187,7 +187,7 @@ func (cfg *Config) CorrectCfg(u *user.UserInfo, gTag, gUc, transTag, transUc, gS
 	cfg.DrawConfig.CorrectCfg(gTag, gUc, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32, transTag, transUc, gSeed)
 }
 
-func getConfig(bot *tgbotapi.BotAPI, u *user.UserInfo, cfg *Config, replyMsgId int) (err error) {
+func (h *Handler) getConfig(u *user.UserInfo, cfg *Config, replyMsgId int) (err error) {
 	if cfg == nil {
 		return errors.New("cfg is nil")
 	}
@@ -203,6 +203,6 @@ func getConfig(bot *tgbotapi.BotAPI, u *user.UserInfo, cfg *Config, replyMsgId i
 	mc.ReplyToMessageID = replyMsgId
 	mc.ParseMode = "HTML"
 	mc.DisableWebPagePreview = false
-	_, err = bot.Send(mc)
+	_, err = h.bot.Send(mc)
 	return err
 }
