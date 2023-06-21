@@ -1293,10 +1293,13 @@ func (h *Handler) panel(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.Ch
 		msg.ReplyMarkup = reDrawButton(u)
 		msg.ParseMode = "HTML"
 		h.bot.Send(msg)
-		photo, err := h.cache.Get(cfg.PrePhotoID)
-		if err != nil {
-			colorlog.Error(err)
-			return
+		var photo []byte
+		if cfg.PrePhotoID != "" {
+			photo, err = h.cache.Get(cfg.PrePhotoID)
+			if err != nil {
+				colorlog.Error(err)
+				return
+			}
 		}
 		controlPhoto, err := h.cache.Get(cfg.ControlPhotoID)
 		if err != nil {
@@ -1364,9 +1367,9 @@ func (h *Handler) superResolution(CallbackQuery *tgbotapi.CallbackQuery, data *t
 		return
 	}
 	cfg := new(Config)
-	md5 := utils.GetFileNamePrefix(CallbackQuery.Message.Document.FileName)
+	fileID := utils.GetFileNamePrefix(CallbackQuery.Message.Document.FileName)
 	var prePhoto []byte
-	prePhoto, err = h.cache.Get(md5)
+	prePhoto, err = h.cache.Get(fileID)
 	if err != nil {
 		prePhoto, err = h.bot.GetFileData(CallbackQuery.Message.Document.FileID)
 		if err != nil {
@@ -1379,7 +1382,7 @@ func (h *Handler) superResolution(CallbackQuery *tgbotapi.CallbackQuery, data *t
 		}
 	}
 	cfg.DrawConfig = api.DrawConfig{}
-	cfg.PrePhotoID = md5
+	cfg.PrePhotoID = fileID
 	cfg.Width, cfg.Height, err = utils.GetPhotoSize(prePhoto)
 	if err != nil {
 		colorlog.Error(err)
@@ -1469,7 +1472,7 @@ func (h *Handler) reDraw(CallbackQuery *tgbotapi.CallbackQuery, u *user.UserInfo
 			}
 		}
 		var controlPhoto []byte
-		if len(cfg.ControlPhotoID) == 32 {
+		if cfg.ControlPhotoID != "" {
 			controlPhoto, err = h.cache.Get(cfg.ControlPhotoID)
 			if err != nil {
 				colorlog.Error(err)
