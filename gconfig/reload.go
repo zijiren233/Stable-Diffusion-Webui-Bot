@@ -1,19 +1,39 @@
 package gconfig
 
 import (
+	"context"
 	"os"
+	"sync"
 
 	"github.com/OhYee/rainbow/errors"
 	"github.com/fsnotify/fsnotify"
 	"github.com/zijiren233/go-colorlog"
 )
 
-var watchList = []chan struct{}{}
+type watchs struct {
+	ctx    context.Context
+	cancel context.CancelFunc
+	ch     chan struct{}
+}
 
-func NewWatchConfig() <-chan struct{} {
+func (w *watchs) Ch() <-chan struct{} {
+	return w.ch
+}
+
+func (w *watchs) Close() {
+	w.cancel()
+}
+
+var (
+	watchMap = &sync.Map{}
+)
+
+func NewWatchConfig(ctx context.Context) *watchs {
 	ch := make(chan struct{}, 1)
-	watchList = append(watchList, ch)
-	return ch
+	ctx, cancel := context.WithCancel(ctx)
+	w := &watchs{ctx: ctx, cancel: cancel, ch: ch}
+	watchMap.Store(w, w)
+	return w
 }
 
 func watch(file string) {
@@ -45,9 +65,17 @@ func watch(file string) {
 					colorlog.Errorf("Load config err: %v", err)
 				} else {
 					colorlog.Debugf("Load config success: %v", config)
-					for _, v := range watchList {
-						v <- struct{}{}
-					}
+					watchMap.Range(func(key, value any) bool {
+						v := value.(*watchs)
+						select {
+						case <-v.ctx.Done():
+							close(v.ch)
+							watchMap.Delete(key)
+						default:
+							v.ch <- struct{}{}
+						}
+						return true
+					})
 				}
 			}
 			// if ev.Op&fsnotify.Remove == fsnotify.Remove {

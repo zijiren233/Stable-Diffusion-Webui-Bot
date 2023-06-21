@@ -1,6 +1,7 @@
 package start
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -92,7 +93,13 @@ func Main() {
 	go gconfig.Wathc()
 	api.Load(gconfig.API())
 	go func() {
-		for range gconfig.NewWatchConfig() {
+		w := gconfig.NewWatchConfig(context.Background())
+		go func() {
+			time.Sleep(5 * time.Second)
+			w.Close()
+		}()
+		c := w.Ch()
+		for range c {
 			api.Load(gconfig.API())
 		}
 	}()
