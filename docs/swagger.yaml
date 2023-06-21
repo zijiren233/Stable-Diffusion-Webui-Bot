@@ -70,15 +70,10 @@ definitions:
           type: string
         type: array
     type: object
-host: creation.pyhdxy.top
 info:
-  contact:
-    email: pyh1670605849@gmail.com
-    name: honeyxybb
-    url: https://t.me/honeyxybb
-  description: Easy API
-  termsOfService: https://t.me/NovelAIDraw_bot
-  title: Creation AI API
+  contact: {}
+  description: API
+  title: AI API
   version: "1.0"
 paths:
   /control-preprocess:

@@ -1,17 +1,11 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "Easy API",
-        "title": "Creation AI API",
-        "termsOfService": "https://t.me/NovelAIDraw_bot",
-        "contact": {
-            "name": "honeyxybb",
-            "url": "https://t.me/honeyxybb",
-            "email": "pyh1670605849@gmail.com"
-        },
+        "description": "API",
+        "title": "AI API",
+        "contact": {},
         "version": "1.0"
     },
-    "host": "creation.pyhdxy.top",
     "basePath": "/api",
     "paths": {
         "/control-preprocess": {

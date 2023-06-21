@@ -10,12 +10,7 @@ const docTemplate = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
-        "termsOfService": "https://t.me/NovelAIDraw_bot",
-        "contact": {
-            "name": "honeyxybb",
-            "url": "https://t.me/honeyxybb",
-            "email": "pyh1670605849@gmail.com"
-        },
+        "contact": {},
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
@@ -760,11 +755,11 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "creation.pyhdxy.top",
+	Host:             "",
 	BasePath:         "/api",
 	Schemes:          []string{},
-	Title:            "Creation AI API",
-	Description:      "Easy API",
+	Title:            "AI API",
+	Description:      "API",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 }
