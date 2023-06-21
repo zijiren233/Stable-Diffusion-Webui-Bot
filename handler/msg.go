@@ -89,7 +89,7 @@ func (h *Handler) getCfg(msg *tgbotapi.Message) (*Config, error) {
 		}
 	} else {
 		if yaml.Unmarshal([]byte(msg.Text), info) == nil {
-			if len(info.PrePhotoID) == 32 {
+			if info.PrePhotoID != "" {
 				photo, err := h.cache.Get(info.PrePhotoID)
 				if err != nil {
 					return nil, err

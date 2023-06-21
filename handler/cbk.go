@@ -877,15 +877,15 @@ func (h *Handler) setCfg(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.C
 	case "resetSeed":
 		cfg.Seed = uint32(rand.Intn(math.MaxUint32))
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
-		msg.ReplyMarkup = panelButton(u, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32)
+		msg.ReplyMarkup = panelButton(u, cfg.PrePhotoID != "", cfg.ControlPhotoID != "")
 		msg.ParseMode = "HTML"
 		h.bot.Send(msg)
 	case "setImg":
-		if len(cfg.PrePhotoID) == 32 {
+		if cfg.PrePhotoID != "" {
 			cfg.PrePhotoID = ""
 			cfg.Strength = 0
 			msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
-			msg.ReplyMarkup = panelButton(u, false, len(cfg.ControlPhotoID) == 32)
+			msg.ReplyMarkup = panelButton(u, false, cfg.ControlPhotoID != "")
 			msg.ParseMode = "HTML"
 			h.bot.Send(msg)
 			return
@@ -962,15 +962,15 @@ func (h *Handler) setCfg(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.C
 		}
 		cfg.Strength = 0.7
 		msg = tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
-		msg.ReplyMarkup = panelButton(u, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32)
+		msg.ReplyMarkup = panelButton(u, cfg.PrePhotoID != "", cfg.ControlPhotoID != "")
 		msg.ParseMode = "HTML"
 		h.bot.Send(msg)
 	case "setControl":
-		if len(cfg.ControlPhotoID) == 32 {
+		if cfg.ControlPhotoID != "" {
 			cfg.ControlPhotoID = ""
 			cfg.CorrectCfg(u, false, false, false, false, true)
 			msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
-			msg.ReplyMarkup = panelButton(u, false, len(cfg.ControlPhotoID) == 32)
+			msg.ReplyMarkup = panelButton(u, false, cfg.ControlPhotoID != "")
 			msg.ParseMode = "HTML"
 			h.bot.Send(msg)
 			return
@@ -997,13 +997,13 @@ func (h *Handler) setCfg(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.C
 		select {
 		case <-t.C:
 			msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
-			msg.ReplyMarkup = panelButton(u, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32)
+			msg.ReplyMarkup = panelButton(u, cfg.PrePhotoID != "", cfg.ControlPhotoID != "")
 			msg.ParseMode = "HTML"
 			h.bot.Send(msg)
 			return
 		case <-c.Chan():
 			msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
-			msg.ReplyMarkup = panelButton(u, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32)
+			msg.ReplyMarkup = panelButton(u, cfg.PrePhotoID != "", cfg.ControlPhotoID != "")
 			msg.ParseMode = "HTML"
 			h.bot.Send(msg)
 			return
@@ -1047,16 +1047,16 @@ func (h *Handler) setCfg(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.C
 				cfg.ControlPhotoID = fi.FileID
 			} else {
 				msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
-				msg.ReplyMarkup = panelButton(u, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32)
+				msg.ReplyMarkup = panelButton(u, cfg.PrePhotoID != "", cfg.ControlPhotoID != "")
 				msg.ParseMode = "HTML"
 				h.bot.Send(msg)
 				return
 			}
-			if len(cfg.PrePhotoID) != 32 {
+			if cfg.PrePhotoID == "" {
 				width, hight, err := utils.GetPhotoSize(photo)
 				if err != nil {
 					msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
-					msg.ReplyMarkup = panelButton(u, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32)
+					msg.ReplyMarkup = panelButton(u, cfg.PrePhotoID != "", cfg.ControlPhotoID != "")
 					msg.ParseMode = "HTML"
 					h.bot.Send(msg)
 					return
@@ -1090,7 +1090,7 @@ func (h *Handler) setCfg(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.C
 		h.bot.Send(msg)
 	case "confirm":
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
-		msg.ReplyMarkup = panelButton(u, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32)
+		msg.ReplyMarkup = panelButton(u, cfg.PrePhotoID != "", cfg.ControlPhotoID != "")
 		msg.ParseMode = "HTML"
 		h.bot.Send(msg)
 	case "sizeType":
@@ -1162,7 +1162,7 @@ func (h *Handler) setCfg(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.C
 		}
 		cfg.CorrectCfg(u, false, false, false, false, true)
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
-		msg.ReplyMarkup = panelButton(u, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32)
+		msg.ReplyMarkup = panelButton(u, cfg.PrePhotoID != "", cfg.ControlPhotoID != "")
 		msg.ParseMode = "HTML"
 		h.bot.Send(msg)
 	case "num":
@@ -1173,13 +1173,13 @@ func (h *Handler) setCfg(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.C
 		cfg.Num = int(i)
 		cfg.CorrectCfg(u, false, false, false, false, false)
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
-		msg.ReplyMarkup = panelButton(u, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32)
+		msg.ReplyMarkup = panelButton(u, cfg.PrePhotoID != "", cfg.ControlPhotoID != "")
 		msg.ParseMode = "HTML"
 		h.bot.Send(msg)
 	case "mode":
 		cfg.Mode = data.Value
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
-		msg.ReplyMarkup = panelButton(u, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32)
+		msg.ReplyMarkup = panelButton(u, cfg.PrePhotoID != "", cfg.ControlPhotoID != "")
 		msg.ParseMode = "HTML"
 		h.bot.Send(msg)
 	case "strength":
@@ -1239,7 +1239,7 @@ func (h *Handler) setCfg(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.C
 	case "model":
 		cfg.Model = data.Value
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
-		msg.ReplyMarkup = panelButton(u, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32)
+		msg.ReplyMarkup = panelButton(u, cfg.PrePhotoID != "", cfg.ControlPhotoID != "")
 		msg.ParseMode = "HTML"
 		h.bot.Send(msg)
 	case "steps":
@@ -1268,7 +1268,7 @@ func (h *Handler) setCfg(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.C
 		h.bot.Send(msg)
 	case "cancel":
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, string(cfg.Fomate2TgHTML()))
-		msg.ReplyMarkup = panelButton(u, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32)
+		msg.ReplyMarkup = panelButton(u, cfg.PrePhotoID != "", cfg.ControlPhotoID != "")
 		msg.ParseMode = "HTML"
 		h.bot.Send(msg)
 	}
@@ -1301,10 +1301,13 @@ func (h *Handler) panel(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.Ch
 				return
 			}
 		}
-		controlPhoto, err := h.cache.Get(cfg.ControlPhotoID)
-		if err != nil {
-			colorlog.Error(err)
-			return
+		var controlPhoto []byte
+		if cfg.ControlPhotoID != "" {
+			controlPhoto, err = h.cache.Get(cfg.ControlPhotoID)
+			if err != nil {
+				colorlog.Error(err)
+				return
+			}
 		}
 		h.drawAndSend(u, CallbackQuery.Message.MessageID, cfg, photo, controlPhoto, false)
 		return
@@ -1464,7 +1467,7 @@ func (h *Handler) reDraw(CallbackQuery *tgbotapi.CallbackQuery, u *user.UserInfo
 	cfg := &Config{}
 	if yaml.Unmarshal([]byte(CallbackQuery.Message.Text), cfg) == nil {
 		var prePhoto []byte
-		if len(cfg.PrePhotoID) == 32 {
+		if cfg.PrePhotoID != "" {
 			prePhoto, err = h.cache.Get(cfg.PrePhotoID)
 			if err != nil {
 				colorlog.Error(err)

@@ -178,12 +178,6 @@ func (cfg *Config) CorrectCfg(u *user.UserInfo, gTag, gUc, transTag, transUc, gS
 		cfg.Width -= cfg.Width % 8
 		cfg.Height -= cfg.Height % 8
 	}
-	if len(cfg.ControlPhotoID) != 32 {
-		cfg.ControlPhotoID = ""
-	}
-	if len(cfg.PrePhotoID) != 32 {
-		cfg.PrePhotoID = ""
-	}
 	cfg.DrawConfig.CorrectCfg(gTag, gUc, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32, transTag, transUc, gSeed)
 }
 
