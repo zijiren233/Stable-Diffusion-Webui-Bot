@@ -67,7 +67,9 @@ func (h *Handler) HandleCmd(Message tgbotapi.Message) {
 	case "share":
 		h.share(Message, u)
 	case "invite":
-		h.invite(Message, u)
+		if parseflag.EnableInvite {
+			h.invite(Message, u)
+		}
 	}
 }
 
@@ -90,12 +92,14 @@ func (h *Handler) start(Message tgbotapi.Message, u *user.UserInfo) {
 	args := strings.Split(Message.CommandArguments(), "-")
 	switch args[0] {
 	case "invite":
-		h.handelInvite(Message, u, args)
+		if parseflag.EnableInvite {
+			h.handelInvite(Message, u, args)
+		}
 	default:
 		msg := tgbotapi.NewMessage(Message.Chat.ID, fmt.Sprintf("%s\n\nYou Can Use Website\nUser ID: `%d`\nPassword: `%s`", u.LoadLang("help"), u.UserInfo.UserID, u.Passwd()))
 		msg.ReplyToMessageID = Message.MessageID
 		msg.ParseMode = "Markdown"
-		msg.ReplyMarkup = &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: append(helpLangButton.InlineKeyboard, clictUrlButton(u, fmt.Sprintf("https://%s/login", parseflag.APIHost)).InlineKeyboard...)}
+		msg.ReplyMarkup = &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: append(helpLangButton.InlineKeyboard, clictUrlButton(u, fmt.Sprintf("%s://%s/login", parseflag.ApiScheme, parseflag.ApiHost)).InlineKeyboard...)}
 		h.bot.Send(msg)
 	}
 }
@@ -134,6 +138,9 @@ var (
 )
 
 func (h *Handler) handelInvite(Message tgbotapi.Message, u *user.UserInfo, args []string) {
+	if parseflag.EnableInvite {
+		return
+	}
 	msg := tgbotapi.NewMessage(Message.Chat.ID, "")
 	msg.ReplyToMessageID = Message.MessageID
 	if len(args) != 2 {
@@ -155,7 +162,7 @@ func (h *Handler) handelInvite(Message tgbotapi.Message, u *user.UserInfo, args 
 	}() {
 		msg.Text = fmt.Sprintf("%s\n\nYou Can Use Website\nUser ID: `%d`\nPassword: `%s`", u.LoadLang("help"), u.UserInfo.UserID, u.Passwd())
 		msg.ParseMode = "Markdown"
-		msg.ReplyMarkup = &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: append(helpLangButton.InlineKeyboard, clictUrlButton(u, fmt.Sprintf("https://%s/login", parseflag.APIHost)).InlineKeyboard...)}
+		msg.ReplyMarkup = &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: append(helpLangButton.InlineKeyboard, clictUrlButton(u, fmt.Sprintf("%s://%s/login", parseflag.ApiScheme, parseflag.ApiHost)).InlineKeyboard...)}
 		h.bot.Send(msg)
 		return
 	}
@@ -258,7 +265,7 @@ func (h *Handler) history(Message tgbotapi.Message, u *user.UserInfo) {
 	msg := tgbotapi.NewMessage(Message.Chat.ID, fmt.Sprintf("%s\nUser ID: `%d`\nPassword: `%s`", u.LoadLang("history"), u.UserInfo.UserID, u.Passwd()))
 	msg.ReplyToMessageID = Message.MessageID
 	msg.ParseMode = "Markdown"
-	msg.ReplyMarkup = clictUrlButton(u, fmt.Sprintf("https://%s/waterfall", parseflag.APIHost))
+	msg.ReplyMarkup = clictUrlButton(u, fmt.Sprintf("%s://%s/waterfall", parseflag.ApiScheme, parseflag.ApiHost))
 	h.bot.Send(msg)
 }
 
@@ -266,7 +273,7 @@ func (h *Handler) apis(Message tgbotapi.Message, u *user.UserInfo) {
 	msg := tgbotapi.NewMessage(Message.Chat.ID, fmt.Sprintf("API use Basic Auth\nUser ID: `%d`\nPassword: `%s`", u.UserInfo.UserID, u.Passwd()))
 	msg.ReplyToMessageID = Message.MessageID
 	msg.ParseMode = "Markdown"
-	msg.ReplyMarkup = clictUrlButton(u, fmt.Sprintf("https://%s/docs/index.html", parseflag.APIHost))
+	msg.ReplyMarkup = clictUrlButton(u, fmt.Sprintf("%s://%s/docs/index.html", parseflag.ApiScheme, parseflag.ApiHost))
 	h.bot.Send(msg)
 }
 
@@ -274,7 +281,7 @@ func (h *Handler) web(Message tgbotapi.Message, u *user.UserInfo) {
 	msg := tgbotapi.NewMessage(Message.Chat.ID, fmt.Sprintf("You Can Use Website\nUser ID: `%d`\nPassword: `%s`", u.UserInfo.UserID, u.Passwd()))
 	msg.ReplyToMessageID = Message.MessageID
 	msg.ParseMode = "Markdown"
-	msg.ReplyMarkup = clictUrlButton(u, fmt.Sprintf("https://%s/login", parseflag.APIHost))
+	msg.ReplyMarkup = clictUrlButton(u, fmt.Sprintf("%s://%s/login", parseflag.ApiScheme, parseflag.ApiHost))
 	h.bot.Send(msg)
 }
 

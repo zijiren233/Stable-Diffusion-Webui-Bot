@@ -244,14 +244,16 @@ func (u *UserInfo) DefaultConfig() *api.DrawConfig {
 func (u *UserInfo) ProhibitString(bot *tgbotapi.BotAPI) string {
 	t := time.Now()
 	buffer := bytes.NewBufferString(strings.ReplaceAll(u.LoadLang("prohibit"), "{{.time}}", utils.TimeFomate(time.Until(time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location()).Add(time.Hour*24)))))
-	rawUrl, err := url.Parse(fmt.Sprintf("https://t.me/%s", bot.Self.UserName))
-	if err != nil {
-		colorlog.Error(err)
-		return buffer.String()
+	if parseflag.EnableInvite {
+		rawUrl, err := url.Parse(fmt.Sprintf("https://t.me/%s", bot.Self.UserName))
+		if err != nil {
+			colorlog.Error(err)
+			return buffer.String()
+		}
+		query := rawUrl.Query()
+		query.Set("start", fmt.Sprintf("invite-%d", u.UserInfo.UserID))
+		rawUrl.RawQuery = query.Encode()
+		buffer.WriteString(fmt.Sprintf("\n%s\n%s", u.LoadLang("invite"), rawUrl.String()))
 	}
-	query := rawUrl.Query()
-	query.Set("start", fmt.Sprintf("invite-%d", u.UserInfo.UserID))
-	rawUrl.RawQuery = query.Encode()
-	buffer.WriteString(fmt.Sprintf("\n%s\n%s", u.LoadLang("invite"), rawUrl.String()))
 	return buffer.String()
 }

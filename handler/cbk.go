@@ -134,7 +134,7 @@ func (h *Handler) helpLang(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi
 	} else {
 		msg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprintf("%s\n\nYou Can Use Website\nUser ID: `%d`\nPassword: `%s`", u.LoadLang("help"), u.UserInfo.UserID, u.Passwd()))
 		msg.ParseMode = "Markdown"
-		msg.ReplyMarkup = &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: append(helpLangButton.InlineKeyboard, clictUrlButton(u, fmt.Sprintf("https://%s/login", parseflag.APIHost)).InlineKeyboard...)}
+		msg.ReplyMarkup = &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: append(helpLangButton.InlineKeyboard, clictUrlButton(u, fmt.Sprintf("%s://%s/login", parseflag.ApiScheme, parseflag.ApiHost)).InlineKeyboard...)}
 		h.bot.Send(msg)
 	}
 }
@@ -746,7 +746,7 @@ func (h *Handler) setCfg(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.C
 				KeywordsRe: []string{fmt.Sprintf("<lora:%s:(-?\\d+)(\\.\\d+)?>", l.Name)},
 			})
 			if err == nil && len(photo) == 1 {
-				msg.WriteString(fmt.Sprintf("\n# <a href=\"https://%s/api/images/%s.png\">Preview</a>", parseflag.APIHost, photo[0].FileID))
+				msg.WriteString(fmt.Sprintf("\n# <a href=\"%s://%s/api/images/%s.png\">Preview</a>", parseflag.ApiScheme, parseflag.ApiHost, photo[0].FileID))
 			}
 		}
 		tgMsg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, msg.String())
@@ -840,7 +840,7 @@ func (h *Handler) setCfg(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.C
 				KeywordsRe: []string{fmt.Sprintf("<%s:%s:(-?\\d+)(\\.\\d+)?>", l.Type, l.Name)},
 			})
 			if err == nil && len(photo) == 1 {
-				msg.WriteString(fmt.Sprintf("\n# <a href=\"https://%s/api/images/%s.png\">Preview</a>", parseflag.APIHost, photo[0].FileID))
+				msg.WriteString(fmt.Sprintf("\n# <a href=\"%s://%s/api/images/%s.png\">Preview</a>", parseflag.ApiScheme, parseflag.ApiHost, photo[0].FileID))
 			}
 		}
 		tgMsg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, msg.String())

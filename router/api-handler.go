@@ -893,13 +893,13 @@ func searchImages(ctx *gin.Context) {
 	for _, v := range photo {
 		switch ctx.Query("cfg_type") {
 		case "json":
-			resp = append(resp, Result{Id: v.FileID, Image: fmt.Sprintf("https://%s/api/images/%s.png", parseflag.APIHost, v.FileID), Cfg: handler.Config{DrawConfig: v.Config, PrePhotoID: v.PrePhotoID, ControlPhotoID: v.ControlPhotoID}, Width: 230, Height: int(float64(v.Config.Height) / float64(v.Config.Width) * 230)})
+			resp = append(resp, Result{Id: v.FileID, Image: fmt.Sprintf("%s://%s/api/images/%s.png", parseflag.ApiScheme, parseflag.ApiHost, v.FileID), Cfg: handler.Config{DrawConfig: v.Config, PrePhotoID: v.PrePhotoID, ControlPhotoID: v.ControlPhotoID}, Width: 230, Height: int(float64(v.Config.Height) / float64(v.Config.Width) * 230)})
 		default:
 			cfg, err := yaml.Marshal(handler.Config{DrawConfig: v.Config, PrePhotoID: v.PrePhotoID, ControlPhotoID: v.ControlPhotoID})
 			if err != nil {
 				continue
 			}
-			resp = append(resp, Result{Id: v.FileID, Image: fmt.Sprintf("https://%s/api/images/%s.png", parseflag.APIHost, v.FileID), Cfg: string(cfg), Width: 230, Height: int(float64(v.Config.Height) / float64(v.Config.Width) * 230)})
+			resp = append(resp, Result{Id: v.FileID, Image: fmt.Sprintf("%s://%s/api/images/%s.png", parseflag.ApiScheme, parseflag.ApiHost, v.FileID), Cfg: string(cfg), Width: 230, Height: int(float64(v.Config.Height) / float64(v.Config.Width) * 230)})
 		}
 	}
 	ctx.JSON(http.StatusOK, Resp{Time: time.Now().Unix(), Data: ImagesData{
@@ -990,13 +990,13 @@ func searchUserImages(ctx *gin.Context) {
 	for _, v := range photo {
 		switch ctx.Query("cfg_type") {
 		case "json":
-			resp = append(resp, Result{Id: v.FileID, Image: fmt.Sprintf("https://%s/api/images/%s.png", parseflag.APIHost, v.FileID), Cfg: handler.Config{DrawConfig: v.Config, PrePhotoID: v.PrePhotoID, ControlPhotoID: v.ControlPhotoID}, Width: 230, Height: int(float64(v.Config.Height) / float64(v.Config.Width) * 230)})
+			resp = append(resp, Result{Id: v.FileID, Image: fmt.Sprintf("%s://%s/api/images/%s.png", parseflag.ApiScheme, parseflag.ApiHost, v.FileID), Cfg: handler.Config{DrawConfig: v.Config, PrePhotoID: v.PrePhotoID, ControlPhotoID: v.ControlPhotoID}, Width: 230, Height: int(float64(v.Config.Height) / float64(v.Config.Width) * 230)})
 		default:
 			cfg, err := yaml.Marshal(handler.Config{DrawConfig: v.Config, PrePhotoID: v.PrePhotoID, ControlPhotoID: v.ControlPhotoID})
 			if err != nil {
 				continue
 			}
-			resp = append(resp, Result{Id: v.FileID, Image: fmt.Sprintf("https://%s/api/images/%s.png", parseflag.APIHost, v.FileID), Cfg: string(cfg), Width: 230, Height: int(float64(v.Config.Height) / float64(v.Config.Width) * 230)})
+			resp = append(resp, Result{Id: v.FileID, Image: fmt.Sprintf("%s://%s/api/images/%s.png", parseflag.ApiScheme, parseflag.ApiHost, v.FileID), Cfg: string(cfg), Width: 230, Height: int(float64(v.Config.Height) / float64(v.Config.Width) * 230)})
 		}
 	}
 	ctx.JSON(http.StatusOK, Resp{Time: time.Now().Unix(), Data: ImagesData{
