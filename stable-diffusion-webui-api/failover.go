@@ -48,20 +48,12 @@ type api struct {
 
 var backendOnce = &sync.Once{}
 
-func Init(apis []gconfig.Api) {
+func Load(apis []gconfig.Api) {
 	loadAPI(apis)
 	backendOnce.Do(func() {
 		go back()
 		go failover()
-		go reloadCFG()
 	})
-}
-
-func reloadCFG() {
-	c := gconfig.NewWatchConfig()
-	for range c {
-		loadAPI(gconfig.API())
-	}
 }
 
 type apiUrl struct {
@@ -248,18 +240,16 @@ func failover() {
 					if err != nil {
 						return false, err
 					}
-					model := []Model{}
-					if json.Unmarshal(b, &model) != nil {
+					if json.Unmarshal(b, &api.Models) != nil {
 						return false, errReturn
 					}
-					api.Models = model
-					if !ModelAllowed(model, allowModels) {
-						colorlog.Warningf("api [%s] models: not allow", api.Url)
+					if !ModelAllowed(api.Models, allowModels) {
 						return false, errModels
 					}
 					return false, nil
 				})
 				if err != nil {
+					colorlog.Errorf("api [%s] have some error: %v", api.Url, err)
 					working.Store(api.Url, false)
 					api.LoadedModels.Range(func(key, value any) bool {
 						api.LoadedModels.Delete(key)

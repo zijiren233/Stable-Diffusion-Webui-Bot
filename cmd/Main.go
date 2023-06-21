@@ -89,7 +89,13 @@ func Main() {
 	if err != nil {
 		panic(err)
 	}
-	api.Init(gconfig.API())
+	go gconfig.Wathc()
+	api.Load(gconfig.API())
+	go func() {
+		for range gconfig.NewWatchConfig() {
+			api.Load(gconfig.API())
+		}
+	}()
 	defer ants.Release()
 	mainPllo, _ = ants.NewPool(ants.DefaultAntsPoolSize, ants.WithOptions(ants.Options{ExpiryDuration: time.Minute, PreAlloc: false, Logger: nil, DisablePurge: false, Nonblocking: false, PanicHandler: func(i interface{}) {
 		colorlog.Fatalf(utils.PrintStackTrace(i))

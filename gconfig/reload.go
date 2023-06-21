@@ -41,8 +41,7 @@ func watch(file string) {
 				return
 			}
 			if ev.Op.Has(fsnotify.Write) {
-				err := Load(ConfigPath)
-				if err != nil {
+				if err := Load(ConfigPath); err != nil {
 					colorlog.Errorf("Load config err: %v", err)
 				} else {
 					colorlog.Debugf("Load config success: %v", config)

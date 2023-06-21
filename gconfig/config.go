@@ -78,8 +78,8 @@ type ControlPreProcess struct {
 	Name string
 }
 
-func init() {
-	go watch(ConfigPath)
+func Wathc() {
+	watch(ConfigPath)
 }
 
 func Load(configPath string) error {

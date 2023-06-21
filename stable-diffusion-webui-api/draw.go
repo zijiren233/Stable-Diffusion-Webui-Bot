@@ -332,10 +332,10 @@ func back() {
 				case run := <-freeWaitGloup:
 					drawPool.Submit(run)
 				default:
-					time.Sleep(time.Millisecond * 3)
+					time.Sleep(time.Millisecond * 10)
 				}
 			} else {
-				time.Sleep(time.Millisecond * 3)
+				time.Sleep(time.Millisecond * 10)
 			}
 		}
 	}
