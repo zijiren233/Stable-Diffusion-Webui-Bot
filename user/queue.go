@@ -46,7 +46,7 @@ func GetTask(userID int64, types TaskType) (*Task, error) {
 }
 
 func (u *UserInfo) AddTask(types TaskType) (*Task, error) {
-	if parseflag.Dev && u.UserInfo.UserID != parseflag.MyID {
+	if parseflag.Dev && u.UserInfo.UserID != parseflag.OwnerID {
 		return nil, errors.New("server under maintenance, please try again later")
 	}
 	task := &Task{id: u.UserInfo.UserID, taskType: types}

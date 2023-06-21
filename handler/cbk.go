@@ -76,8 +76,8 @@ func HandleCallback(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery)
 		lang(bot, CallbackQuery, data, u)
 	case "helpLang":
 		helpLang(bot, CallbackQuery, data, u)
-	case "drawpool":
-		drawpool(bot, CallbackQuery, data, u)
+	case "pool":
+		pool(bot, CallbackQuery, data, u)
 	}
 }
 
@@ -119,8 +119,8 @@ func editCfg(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *
 	getConfig(bot, u, cfg, CallbackQuery.Message.MessageID)
 }
 
-func drawpool(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.ChanData, u *user.UserInfo) {
-	if u.UserInfo.UserID != parseflag.MyID {
+func pool(bot *tgbotapi.BotAPI, CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.ChanData, u *user.UserInfo) {
+	if u.UserInfo.UserID != parseflag.OwnerID {
 		return
 	}
 	msg := tgbotapi.NewEditMessageTextAndMarkup(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, fmt.Sprintf("```\npool: %d\nfree: %d\nwait: %d\ntime: %v\n```", api.DrawPoolCap(), api.DrawFree(), api.DrawWait(), time.Now().Format("01-02 15:04:05")), poolButton)

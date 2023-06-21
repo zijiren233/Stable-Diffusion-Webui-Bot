@@ -7,7 +7,7 @@ var (
 	Dev           bool
 	WebHook       bool
 	Port          int
-	MyID          int64
+	OwnerID       int64
 	DSN           string
 	ImgMaxSize    int
 	MaxFree       int
@@ -20,7 +20,7 @@ var (
 func init() {
 	flag.BoolVar(&Dev, "dev", false, "development mode")
 	flag.IntVar(&ImgMaxSize, "imgMax", 1638400, "image maximum resolution")
-	flag.Int64Var(&MyID, "owner", 2143676086, "owner telegram id")
+	flag.Int64Var(&OwnerID, "owner", 2143676086, "owner telegram id")
 	flag.IntVar(&Port, "p", 8082, "port")
 	flag.IntVar(&MaxFree, "mf", 0, "free user max free time")
 	flag.StringVar(&HOST, "host", ``, "webhook and api host")

@@ -24,7 +24,7 @@ func clictUrlButton(u *user.UserInfo, url string) *tgbotapi.InlineKeyboardMarkup
 
 var poolButton = tgbotapi.NewInlineKeyboardMarkup(
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("刷新", "drawpool"),
+		tgbotapi.NewInlineKeyboardButtonData("刷新", "pool"),
 	),
 )
 

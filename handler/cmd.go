@@ -27,8 +27,8 @@ func HandleCmd(bot *tgbotapi.BotAPI, Message tgbotapi.Message) {
 		return
 	}
 	switch Message.Command() {
-	case "drawpool":
-		drawPool(bot, Message)
+	case "pool":
+		_pool(bot, Message)
 	case "gettoken":
 		getToken(bot, Message)
 	case "token":
@@ -102,7 +102,7 @@ func start(bot *tgbotapi.BotAPI, Message tgbotapi.Message, u *user.UserInfo) {
 }
 
 func usefree(bot *tgbotapi.BotAPI, Message tgbotapi.Message, u *user.UserInfo) {
-	if Message.From.ID != parseflag.MyID {
+	if Message.From.ID != parseflag.OwnerID {
 		return
 	}
 	args := strings.Split(Message.CommandArguments(), " ")
@@ -181,7 +181,7 @@ func newSetDft(bot *tgbotapi.BotAPI, Message tgbotapi.Message, u *user.UserInfo)
 }
 
 func info(bot *tgbotapi.BotAPI, Message tgbotapi.Message) {
-	if Message.From.ID != parseflag.MyID {
+	if Message.From.ID != parseflag.OwnerID {
 		return
 	}
 	uID, err := strconv.ParseInt(Message.CommandArguments(), 10, 64)
@@ -214,7 +214,7 @@ func subscribe(bot *tgbotapi.BotAPI, Message tgbotapi.Message, u *user.UserInfo)
 }
 
 func unsubscribe(bot *tgbotapi.BotAPI, Message tgbotapi.Message) {
-	if Message.From.ID != parseflag.MyID {
+	if Message.From.ID != parseflag.OwnerID {
 		return
 	}
 	uID, err := strconv.ParseInt(Message.CommandArguments(), 10, 64)
@@ -405,7 +405,7 @@ RUN:
 }
 
 func dev(bot *tgbotapi.BotAPI, Message tgbotapi.Message) {
-	if Message.From.ID != parseflag.MyID {
+	if Message.From.ID != parseflag.OwnerID {
 		return
 	}
 	parseflag.Dev = !parseflag.Dev
@@ -440,7 +440,7 @@ func token(bot *tgbotapi.BotAPI, Message tgbotapi.Message, u *user.UserInfo) {
 }
 
 func getToken(bot *tgbotapi.BotAPI, Message tgbotapi.Message) {
-	if Message.From.ID != parseflag.MyID {
+	if Message.From.ID != parseflag.OwnerID {
 		return
 	}
 	u, err := strconv.ParseUint(Message.CommandArguments(), 10, 64)
@@ -459,8 +459,8 @@ func getToken(bot *tgbotapi.BotAPI, Message tgbotapi.Message) {
 	bot.Send(msg)
 }
 
-func drawPool(bot *tgbotapi.BotAPI, Message tgbotapi.Message) {
-	if Message.From.ID != parseflag.MyID {
+func _pool(bot *tgbotapi.BotAPI, Message tgbotapi.Message) {
+	if Message.From.ID != parseflag.OwnerID {
 		return
 	}
 	msg := tgbotapi.NewMessage(Message.Chat.ID, fmt.Sprintf("```\npool: %d\nfree: %d\nwait: %d\ntime: %v\n```", api.DrawPoolCap(), api.DrawFree(), api.DrawWait(), time.Now().Format("01-02 15:04:05")))
