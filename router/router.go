@@ -2,18 +2,22 @@ package router
 
 import (
 	"fmt"
+	"io/fs"
 	"net/http"
 	"time"
 
+	"github.com/zijiren233/go-colorlog"
 	_ "github.com/zijiren233/stable-diffusion-webui-bot/docs"
 	"github.com/zijiren233/stable-diffusion-webui-bot/handler"
+	"github.com/zijiren233/stable-diffusion-webui-bot/web"
 	"golang.org/x/time/rate"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"github.com/zijiren233/go-colorlog"
 )
+
+var logFormat = gin.LoggerWithFormatter(log)
 
 func log(params gin.LogFormatterParams) string {
 	var statusColor, methodColor, resetColor string
@@ -37,7 +41,7 @@ func log(params gin.LogFormatterParams) string {
 
 func (r *Router) regDocs() *gin.Engine {
 	rg := r.eng.Group("/docs")
-	rg.Use(gin.LoggerWithFormatter(log))
+	rg.Use(logFormat)
 	rg.GET("/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	return r.eng
 }
@@ -75,7 +79,7 @@ func WithWebhook(webhookUriPath string, webhookHandler func(w http.ResponseWrite
 	return func(r *Router) { r.webhookHandler = webhookHandler; r.webhookUriPath = webhookUriPath }
 }
 
-func New(eng *gin.Engine, config ...ConfigFunc) *Router {
+func New(eng *gin.Engine, config ...ConfigFunc) (*Router, error) {
 	r := &Router{eng: eng}
 	for _, cf := range config {
 		cf(r)
@@ -91,7 +95,24 @@ func New(eng *gin.Engine, config ...ConfigFunc) *Router {
 			r.webhookHandler(ctx.Writer, ctx.Request)
 		})
 	}
-	return r
+	fStatic, err := fs.Sub(web.Static, "static")
+	if err != nil {
+		return nil, err
+	}
+	assets := r.eng.Group("/assets")
+	{
+		assets.Use(logFormat)
+		fAssets, err := fs.Sub(fStatic, "assets")
+		if err != nil {
+			return nil, err
+		}
+		assets.StaticFS("/", http.FS(fAssets))
+	}
+	r.eng.Use(logFormat)
+	r.eng.NoRoute(func(ctx *gin.Context) {
+		ctx.FileFromFS("/", http.FS(fStatic))
+	})
+	return r, nil
 }
 
 func (r *Router) Eng() *gin.Engine {

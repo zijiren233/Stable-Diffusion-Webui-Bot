@@ -68,7 +68,7 @@ func Main() {
 	defer mainPllo.Release()
 	c, err := cache.NewCache(cache.WithSavePath(parseflag.ImageSavePath), cache.WithCacheNum(parseflag.ImageCacheNum))
 	if err != nil {
-		panic(fmt.Errorf("New Cache Error: %v", err))
+		panic(fmt.Errorf("new Cache Error: %v", err))
 	}
 	hConfigs := []handler.ConfigFunc{handler.WithCache(c)}
 	if parseflag.WebhookHost != "" {
@@ -83,7 +83,10 @@ func Main() {
 	if parseflag.WebhookHost != "" {
 		rConfigs = append(rConfigs, router.WithWebhook(h.WebhookUriPath(), h.WebhookHandler()))
 	}
-	r := router.New(gin.New(), rConfigs...)
+	r, err := router.New(gin.New(), rConfigs...)
+	if err != nil {
+		panic(err)
+	}
 	go r.Eng().Run(fmt.Sprintf("%s:%d", parseflag.Listen, parseflag.Port))
 	go h.Run(context.Background())
 	colorlog.Infof("Service started successfully!")

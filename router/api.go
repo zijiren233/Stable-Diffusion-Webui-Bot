@@ -35,7 +35,7 @@ type Any2Img struct {
 
 func (r *Router) apis() {
 	api := r.eng.Group("/api")
-	api.Use(gin.LoggerWithFormatter(log))
+	api.Use(logFormat)
 	auth := auth(r.handler.Bot())
 	{
 		api.GET("/i18n/:code", i18nYaml)
