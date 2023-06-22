@@ -5,8 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
-	"os"
-	"path"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -17,27 +15,15 @@ import (
 	"github.com/zijiren233/stable-diffusion-webui-bot/handler"
 	"github.com/zijiren233/stable-diffusion-webui-bot/router"
 	api "github.com/zijiren233/stable-diffusion-webui-bot/stable-diffusion-webui-api"
-	"github.com/zijiren233/stable-diffusion-webui-bot/utils"
 
 	"github.com/panjf2000/ants/v2"
 	"github.com/zijiren233/go-colorlog"
-)
-
-var (
-	mainPllo *ants.Pool
 )
 
 func init() {
 	rand.Seed(time.Now().UnixMilli())
 	gin.SetMode(gin.ReleaseMode)
 
-	if err := os.RemoveAll(path.Join(os.TempDir(), "tmp-stable-diffusion-webui-bot")); err != nil {
-		panic(err)
-	}
-
-	if err := os.MkdirAll(path.Join(os.TempDir(), "tmp-stable-diffusion-webui-bot"), os.ModePerm); err != nil {
-		panic(err)
-	}
 	colorlog.SetLogLevle(colorlog.L_Debug)
 }
 
@@ -62,10 +48,6 @@ func Main() {
 		}
 	}()
 	defer ants.Release()
-	mainPllo, _ = ants.NewPool(ants.DefaultAntsPoolSize, ants.WithOptions(ants.Options{ExpiryDuration: time.Minute, PreAlloc: false, Logger: nil, DisablePurge: false, Nonblocking: false, PanicHandler: func(i interface{}) {
-		colorlog.Fatalf(utils.PrintStackTrace(i))
-	}}))
-	defer mainPllo.Release()
 	c, err := cache.NewCache(cache.WithSavePath(parseflag.ImageSavePath), cache.WithCacheNum(parseflag.ImageCacheNum))
 	if err != nil {
 		panic(fmt.Errorf("new Cache Error: %v", err))

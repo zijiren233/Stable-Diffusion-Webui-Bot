@@ -386,10 +386,21 @@ func parseConfig(str []string) map[string]string {
 	return kvm
 }
 
+func init() {
+	os.RemoveAll(path.Join(os.TempDir(), "exif-tmp"))
+}
+
 func GetImgCfg(photo []byte) (*DrawConfig, error) {
-	md5 := utils.Md5(photo)
-	fpath := path.Join(os.TempDir(), "aiTmp", md5)
-	file, err := os.OpenFile(fpath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
+	if len(photo) == 0 {
+		return nil, errors.New("photo len is nil")
+	}
+	dPath := path.Join(os.TempDir(), "exif-tmp")
+	err := os.MkdirAll(dPath, os.ModePerm)
+	if err != nil {
+		return nil, err
+	}
+	fPath := path.Join(dPath, utils.Md5(photo))
+	file, err := os.OpenFile(fPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 	if err != nil {
 		return nil, err
 	}
@@ -398,8 +409,8 @@ func GetImgCfg(photo []byte) (*DrawConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer os.Remove(fpath)
-	fm := utils.Exif.ExtractMetadata(fpath)
+	defer os.Remove(fPath)
+	fm := utils.Exif.ExtractMetadata(fPath)
 	if fm[0].Err != nil {
 		return nil, fm[0].Err
 	}
