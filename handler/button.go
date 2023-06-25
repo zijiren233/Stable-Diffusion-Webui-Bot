@@ -2,7 +2,7 @@ package handler
 
 import (
 	"fmt"
-
+	parseflag "github.com/zijiren233/stable-diffusion-webui-bot/flag"
 	"github.com/zijiren233/stable-diffusion-webui-bot/gconfig"
 	"github.com/zijiren233/stable-diffusion-webui-bot/i18n"
 	api "github.com/zijiren233/stable-diffusion-webui-bot/stable-diffusion-webui-api"
@@ -134,7 +134,7 @@ func generateSetDftUCButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup {
 func generateSetDftNumberButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup {
 	var row = [][]tgbotapi.InlineKeyboardButton{}
 	i := 0
-	for v := 1; v <= api.MaxNum; v++ {
+	for v := 1; v <= parseflag.MaxNum; v++ {
 		if v != 1 && (v-1)%MAXROW == 0 {
 			i++
 		}
@@ -266,7 +266,7 @@ func sprButton(u *user.UserInfo, option int) *tgbotapi.InlineKeyboardMarkup {
 func generateNUMButton(option int) *tgbotapi.InlineKeyboardMarkup {
 	var row = [][]tgbotapi.InlineKeyboardButton{}
 	i := 0
-	for v := 1; v <= api.MaxNum; v++ {
+	for v := 1; v <= parseflag.MaxNum; v++ {
 		if v != 1 && (v-1)%MAXROW == 0 {
 			i++
 		}
