@@ -11,6 +11,7 @@ var (
 	WebhookHost, ApiHost, ApiScheme string
 	Port                            int
 	OwnerID                         int64
+	MaxNum							int
 	DSN                             string
 	ImgMaxSize                      int
 	MaxFree                         int
@@ -27,6 +28,7 @@ func init() {
 	flag.Int64Var(&OwnerID, "owner", 2143676086, "owner telegram id")
 	flag.IntVar(&Port, "port", 8082, "port")
 	flag.IntVar(&MaxFree, "max-free", 0, "free user max free time")
+	flag.IntVar(&MaxNum, "max-num", 6 , "max number of images")
 	flag.IntVar(&ImageCacheNum, "img-cache-num", 100, "image cache to mem max num")
 	flag.BoolVar(&EnableInvite, "invite", false, "Enable Invite")
 	flag.StringVar(&WebhookHost, "webhook-host", "", "enable telegram bot webhook: webhook.doamin.com")

@@ -42,6 +42,8 @@
         listening address: 127.0.0.1 | 0.0.0.0 (default "127.0.0.1")
   -max-free int
         free user max free time
+  -max-num int
+        paid user max images (default 6)
   -owner int
         owner telegram id (default 2143676086)
   -port int
