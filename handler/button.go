@@ -2,21 +2,18 @@ package handler
 
 import (
 	"fmt"
-	parseflag "github.com/zijiren233/stable-diffusion-webui-bot/flag"
+
 	"github.com/zijiren233/stable-diffusion-webui-bot/gconfig"
 	"github.com/zijiren233/stable-diffusion-webui-bot/i18n"
-	api "github.com/zijiren233/stable-diffusion-webui-bot/stable-diffusion-webui-api"
-	"github.com/zijiren233/stable-diffusion-webui-bot/user"
 	"github.com/zijiren233/stable-diffusion-webui-bot/utils"
-
 	tgbotapi "github.com/zijiren233/tg-bot-api/v6"
 )
 
-func goJoinButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup {
-	return clictUrlButton(u, gconfig.GROUP())
+func (h *Handler) goJoinButton(u *UserInfo) *tgbotapi.InlineKeyboardMarkup {
+	return clictUrlButton(u, h.group)
 }
 
-func clictUrlButton(u *user.UserInfo, url string) *tgbotapi.InlineKeyboardMarkup {
+func clictUrlButton(u *UserInfo, url string) *tgbotapi.InlineKeyboardMarkup {
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonURL(u.LoadLang("clickMe"), url),
 	)}}
@@ -28,11 +25,11 @@ var poolButton = tgbotapi.NewInlineKeyboardMarkup(
 	),
 )
 
-func goGuideButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup {
-	return clictUrlButton(u, gconfig.GUIDE())
+func (h *Handler) goGuideButton(u *UserInfo) *tgbotapi.InlineKeyboardMarkup {
+	return clictUrlButton(u, h.guide)
 }
 
-func panelButton(u *user.UserInfo, photo, control bool) *tgbotapi.InlineKeyboardMarkup {
+func panelButton(u *UserInfo, photo, control bool) *tgbotapi.InlineKeyboardMarkup {
 	var row = [][]tgbotapi.InlineKeyboardButton{}
 	row = append(row, []tgbotapi.InlineKeyboardButton{
 		tgbotapi.NewInlineKeyboardButtonData(u.LoadLang("editTag"), "setCfg:editTag:0"),
@@ -84,7 +81,7 @@ func panelButton(u *user.UserInfo, photo, control bool) *tgbotapi.InlineKeyboard
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: row}
 }
 
-func setDefaultCfg(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup {
+func setDefaultCfg(u *UserInfo) *tgbotapi.InlineKeyboardMarkup {
 	var row = make([][]tgbotapi.InlineKeyboardButton, 3)
 	row[0] = []tgbotapi.InlineKeyboardButton{
 		tgbotapi.NewInlineKeyboardButtonData(u.LoadLang("mode"), "default:mode"),
@@ -101,15 +98,14 @@ func setDefaultCfg(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup {
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: row}
 }
 
-func generateSetDftMODEButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup {
-	models := api.AllMode()
-	lens := len(models) / MAXROW
-	if len(models)%MAXROW != 0 {
+func (h *Handler) generateSetDftMODEButton(u *UserInfo) *tgbotapi.InlineKeyboardMarkup {
+	lens := len(h.mode) / MAXROW
+	if len(h.mode)%MAXROW != 0 {
 		lens += 1
 	}
 	var row = make([][]tgbotapi.InlineKeyboardButton, lens+1)
 	rows := 0
-	for k, v := range models {
+	for k, v := range h.mode {
 		if k != 0 && k%MAXROW == 0 {
 			rows += 1
 		}
@@ -123,7 +119,7 @@ func generateSetDftMODEButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup {
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: row}
 }
 
-func generateSetDftUCButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup {
+func generateSetDftUCButton(u *UserInfo) *tgbotapi.InlineKeyboardMarkup {
 	var row = make([][]tgbotapi.InlineKeyboardButton, 3)
 	row[0] = append(row[0], tgbotapi.NewInlineKeyboardButtonData(fmt.Sprint(u.LoadLang("setDft"), u.LoadLang("unwanted")), "setDft:uc"))
 	row[1] = append(row[1], tgbotapi.NewInlineKeyboardButtonData(u.LoadLang("reset"), "setDft:uc:reset"))
@@ -131,10 +127,10 @@ func generateSetDftUCButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup {
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: row}
 }
 
-func generateSetDftNumberButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup {
+func (h *Handler) generateSetDftNumberButton(u *UserInfo) *tgbotapi.InlineKeyboardMarkup {
 	var row = [][]tgbotapi.InlineKeyboardButton{}
 	i := 0
-	for v := 1; v <= parseflag.MaxNum; v++ {
+	for v := 1; v <= h.MaxNum; v++ {
 		if v != 1 && (v-1)%MAXROW == 0 {
 			i++
 		}
@@ -151,7 +147,7 @@ func generateSetDftNumberButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: row}
 }
 
-func generateSetDftScaleButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup {
+func generateSetDftScaleButton(u *UserInfo) *tgbotapi.InlineKeyboardMarkup {
 	return &tgbotapi.InlineKeyboardMarkup{
 		InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{
 			{
@@ -165,7 +161,7 @@ func generateSetDftScaleButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup 
 	}
 }
 
-func generateSetDftStepsButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup {
+func generateSetDftStepsButton(u *UserInfo) *tgbotapi.InlineKeyboardMarkup {
 	return &tgbotapi.InlineKeyboardMarkup{
 		InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{
 			{
@@ -179,7 +175,7 @@ func generateSetDftStepsButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup 
 	}
 }
 
-func editControlButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup {
+func editControlButton(u *UserInfo) *tgbotapi.InlineKeyboardMarkup {
 	var row = [][]tgbotapi.InlineKeyboardButton{}
 	row = append(row, []tgbotapi.InlineKeyboardButton{
 		tgbotapi.NewInlineKeyboardButtonData(u.LoadLang("controlPreprocess"), "setCfg:controlPreprocess"),
@@ -194,15 +190,14 @@ func editControlButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup {
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: row}
 }
 
-func controlPreprocessButton(u *user.UserInfo, option string) *tgbotapi.InlineKeyboardMarkup {
-	models := gconfig.PreProcess()
-	lens := len(models) / MAXROW
-	if len(models)%MAXROW != 0 {
+func (h *Handler) controlPreprocessButton(u *UserInfo, option string) *tgbotapi.InlineKeyboardMarkup {
+	lens := len(h.ControlPreProcess) / MAXROW
+	if len(h.ControlPreProcess)%MAXROW != 0 {
 		lens += 1
 	}
 	var row = make([][]tgbotapi.InlineKeyboardButton, lens)
 	rows := 0
-	for k, v := range models {
+	for k, v := range h.ControlPreProcess {
 		if k != 0 && k%MAXROW == 0 {
 			rows += 1
 		}
@@ -215,15 +210,14 @@ func controlPreprocessButton(u *user.UserInfo, option string) *tgbotapi.InlineKe
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: row}
 }
 
-func controlProcessButton(option string) *tgbotapi.InlineKeyboardMarkup {
-	models := gconfig.Process()
-	lens := len(models) / MAXROW
-	if len(models)%MAXROW != 0 {
+func (h *Handler) controlProcessButton(option string) *tgbotapi.InlineKeyboardMarkup {
+	lens := len(h.ControlProcess) / MAXROW
+	if len(h.ControlProcess)%MAXROW != 0 {
 		lens += 1
 	}
 	var row = make([][]tgbotapi.InlineKeyboardButton, lens)
 	rows := 0
-	for k, v := range models {
+	for k, v := range h.ControlProcess {
 		if k != 0 && k%MAXROW == 0 {
 			rows += 1
 		}
@@ -236,13 +230,13 @@ func controlProcessButton(option string) *tgbotapi.InlineKeyboardMarkup {
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: row}
 }
 
-func cancelButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup {
+func cancelButton(u *UserInfo) *tgbotapi.InlineKeyboardMarkup {
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData(u.LoadLang("cancel"), "delete:cancel"),
 	)}}
 }
 
-func sprButton(u *user.UserInfo, option int) *tgbotapi.InlineKeyboardMarkup {
+func sprButton(u *UserInfo, option int) *tgbotapi.InlineKeyboardMarkup {
 	var row = make([][]tgbotapi.InlineKeyboardButton, 2)
 	if option == 2 {
 		row[0] = append(row[0], tgbotapi.NewInlineKeyboardButtonData("✅ 2", "cmd-spr:2"))
@@ -263,10 +257,10 @@ func sprButton(u *user.UserInfo, option int) *tgbotapi.InlineKeyboardMarkup {
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: row}
 }
 
-func generateNUMButton(option int) *tgbotapi.InlineKeyboardMarkup {
+func (h *Handler) generateNUMButton(option int) *tgbotapi.InlineKeyboardMarkup {
 	var row = [][]tgbotapi.InlineKeyboardButton{}
 	i := 0
-	for v := 1; v <= parseflag.MaxNum; v++ {
+	for v := 1; v <= h.MaxNum; v++ {
 		if v != 1 && (v-1)%MAXROW == 0 {
 			i++
 		}
@@ -282,15 +276,14 @@ func generateNUMButton(option int) *tgbotapi.InlineKeyboardMarkup {
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: row}
 }
 
-func generateMODEButton(option string) *tgbotapi.InlineKeyboardMarkup {
-	models := api.AllMode()
-	lens := len(models) / MAXROW
-	if len(models)%MAXROW != 0 {
+func (h *Handler) generateMODEButton(option string) *tgbotapi.InlineKeyboardMarkup {
+	lens := len(h.mode) / MAXROW
+	if len(h.mode)%MAXROW != 0 {
 		lens += 1
 	}
 	var row = make([][]tgbotapi.InlineKeyboardButton, lens)
 	rows := 0
-	for k, v := range models {
+	for k, v := range h.mode {
 		if k != 0 && k%MAXROW == 0 {
 			rows += 1
 		}
@@ -303,15 +296,14 @@ func generateMODEButton(option string) *tgbotapi.InlineKeyboardMarkup {
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: row}
 }
 
-func generateModelButton(name string) *tgbotapi.InlineKeyboardMarkup {
-	models := gconfig.MODELS()
-	lens := len(models) / 3
-	if len(models)%3 != 0 {
+func (h *Handler) generateModelButton(name string) *tgbotapi.InlineKeyboardMarkup {
+	lens := len(h.Models) / 3
+	if len(h.Models)%3 != 0 {
 		lens += 1
 	}
 	var row = make([][]tgbotapi.InlineKeyboardButton, lens)
 	rows := 0
-	for k, v := range models {
+	for k, v := range h.Models {
 		if k != 0 && k%3 == 0 {
 			rows += 1
 		}
@@ -327,8 +319,8 @@ func generateModelButton(name string) *tgbotapi.InlineKeyboardMarkup {
 const MAXROW = 3
 const MAXONEPAGEOBJ = MAXROW * 7
 
-func generateAllExtraModelButton(u *user.UserInfo, page, groupIndex int, options []string) *tgbotapi.InlineKeyboardMarkup {
-	loras := gconfig.GroupIndex2ExtraModels(groupIndex)
+func (h *Handler) generateAllExtraModelButton(u *UserInfo, page, groupIndex int, options []string) *tgbotapi.InlineKeyboardMarkup {
+	loras := h.GroupIndex2ExtraModels(groupIndex)
 	if page == 0 {
 		page = 1
 	} else if page < 0 {
@@ -408,8 +400,8 @@ func generateAllExtraModelButton(u *user.UserInfo, page, groupIndex int, options
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: row}
 }
 
-func generateAllExtraModelGroupButton(u *user.UserInfo, page int) *tgbotapi.InlineKeyboardMarkup {
-	groups := gconfig.ExtraModelGroup()
+func (h *Handler) generateAllExtraModelGroupButton(u *UserInfo, page int) *tgbotapi.InlineKeyboardMarkup {
+	groups := h.ExtraModelAllGroup
 	if page == 0 {
 		page = 1
 	} else if page < 0 {
@@ -483,10 +475,10 @@ func generateAllExtraModelGroupButton(u *user.UserInfo, page int) *tgbotapi.Inli
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: row}
 }
 
-func generateExtraModelButton(u *user.UserInfo, page, groupIndex int, options []string) *tgbotapi.InlineKeyboardMarkup {
-	models := gconfig.GroupIndex2ExtraModels(groupIndex)
+func (h *Handler) generateExtraModelButton(u *UserInfo, page, groupIndex int, options []string) *tgbotapi.InlineKeyboardMarkup {
+	models := h.GroupIndex2ExtraModels(groupIndex)
 	if len(models) == 0 || page <= 0 {
-		return generateAllExtraModelButton(u, page, groupIndex, options)
+		return h.generateAllExtraModelButton(u, page, groupIndex, options)
 	}
 	all := len(models)
 	var maxPage = all / MAXROW
@@ -554,7 +546,7 @@ func generateExtraModelButton(u *user.UserInfo, page, groupIndex int, options []
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: row}
 }
 
-func generateAllTagButton(u *user.UserInfo, page int, options, allTag []string) *tgbotapi.InlineKeyboardMarkup {
+func (h *Handler) generateAllTagButton(u *UserInfo, page int, options, allTag []string) *tgbotapi.InlineKeyboardMarkup {
 	if page == 0 {
 		page = 1
 	} else if page < 0 {
@@ -635,9 +627,9 @@ func generateAllTagButton(u *user.UserInfo, page int, options, allTag []string) 
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: row}
 }
 
-func editTagButton(u *user.UserInfo, page int, options, allTag []string) *tgbotapi.InlineKeyboardMarkup {
+func (h *Handler) editTagButton(u *UserInfo, page int, options, allTag []string) *tgbotapi.InlineKeyboardMarkup {
 	if len(allTag) == 0 || page <= 0 {
-		return generateAllTagButton(u, page, options, allTag)
+		return h.generateAllTagButton(u, page, options, allTag)
 	}
 	all := len(allTag)
 	var maxPage = all / MAXROW
@@ -710,7 +702,7 @@ func editTagButton(u *user.UserInfo, page int, options, allTag []string) *tgbota
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: row}
 }
 
-func generateAllUcButton(u *user.UserInfo, page int, options, allUc []string) *tgbotapi.InlineKeyboardMarkup {
+func (h *Handler) generateAllUcButton(u *UserInfo, page int, options, allUc []string) *tgbotapi.InlineKeyboardMarkup {
 	if page == 0 {
 		page = 1
 	} else if page < 0 {
@@ -791,9 +783,9 @@ func generateAllUcButton(u *user.UserInfo, page int, options, allUc []string) *t
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: row}
 }
 
-func editUcButton(u *user.UserInfo, page int, options, allUc []string) *tgbotapi.InlineKeyboardMarkup {
+func (h *Handler) editUcButton(u *UserInfo, page int, options, allUc []string) *tgbotapi.InlineKeyboardMarkup {
 	if len(allUc) == 0 || page <= 0 {
-		return generateAllUcButton(u, page, options, allUc)
+		return h.generateAllUcButton(u, page, options, allUc)
 	}
 	var maxPage = len(allUc) / MAXROW
 	if len(allUc)%MAXROW != 0 {
@@ -865,7 +857,7 @@ func editUcButton(u *user.UserInfo, page int, options, allUc []string) *tgbotapi
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: row}
 }
 
-func imgButton(u *user.UserInfo, superResolution bool) *tgbotapi.InlineKeyboardMarkup {
+func imgButton(u *UserInfo, superResolution bool) *tgbotapi.InlineKeyboardMarkup {
 	if superResolution {
 		return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData(u.LoadLang("edit"), "editImg"),
@@ -892,7 +884,7 @@ func imgButton(u *user.UserInfo, superResolution bool) *tgbotapi.InlineKeyboardM
 	}
 }
 
-func sizeTypeButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup {
+func sizeTypeButton(u *UserInfo) *tgbotapi.InlineKeyboardMarkup {
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData("1:1", "setCfg:sizeType:1:1"),
 		tgbotapi.NewInlineKeyboardButtonData("3:2", "setCfg:sizeType:3:2"),
@@ -910,7 +902,7 @@ func sizeTypeButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup {
 		)}}
 }
 
-func custonSizeButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup {
+func custonSizeButton(u *UserInfo) *tgbotapi.InlineKeyboardMarkup {
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData("W+8", "setCfg:custonSize:w+8"),
 		tgbotapi.NewInlineKeyboardButtonData("W+32", "setCfg:custonSize:w+32"),
@@ -941,7 +933,7 @@ func custonSizeButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup {
 		)}}
 }
 
-func generate3_2Button(u *user.UserInfo, option string) *tgbotapi.InlineKeyboardMarkup {
+func generate3_2Button(u *UserInfo, option string) *tgbotapi.InlineKeyboardMarkup {
 	var row = make([][]tgbotapi.InlineKeyboardButton, 4)
 	if option == "576*384" {
 		row[0] = append(row[0], tgbotapi.NewInlineKeyboardButtonData("✅ 576*384", "setCfg:size:576*384"))
@@ -983,7 +975,7 @@ func generate3_2Button(u *user.UserInfo, option string) *tgbotapi.InlineKeyboard
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: row}
 }
 
-func generate2_3Button(u *user.UserInfo, option string) *tgbotapi.InlineKeyboardMarkup {
+func generate2_3Button(u *UserInfo, option string) *tgbotapi.InlineKeyboardMarkup {
 	var row = make([][]tgbotapi.InlineKeyboardButton, 4)
 	if option == "384*576" {
 		row[0] = append(row[0], tgbotapi.NewInlineKeyboardButtonData("✅ 384*576", "setCfg:size:384*576"))
@@ -1025,7 +1017,7 @@ func generate2_3Button(u *user.UserInfo, option string) *tgbotapi.InlineKeyboard
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: row}
 }
 
-func generate4_3Button(u *user.UserInfo, option string) *tgbotapi.InlineKeyboardMarkup {
+func generate4_3Button(u *UserInfo, option string) *tgbotapi.InlineKeyboardMarkup {
 	var row = make([][]tgbotapi.InlineKeyboardButton, 4)
 	if option == "512*384" {
 		row[0] = append(row[0], tgbotapi.NewInlineKeyboardButtonData("✅ 512*384", "setCfg:size:512*384"))
@@ -1072,7 +1064,7 @@ func generate4_3Button(u *user.UserInfo, option string) *tgbotapi.InlineKeyboard
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: row}
 }
 
-func generate3_4Button(u *user.UserInfo, option string) *tgbotapi.InlineKeyboardMarkup {
+func generate3_4Button(u *UserInfo, option string) *tgbotapi.InlineKeyboardMarkup {
 	var row = make([][]tgbotapi.InlineKeyboardButton, 4)
 	if option == "384*512" {
 		row[0] = append(row[0], tgbotapi.NewInlineKeyboardButtonData("✅ 384*512", "setCfg:size:384*512"))
@@ -1119,7 +1111,7 @@ func generate3_4Button(u *user.UserInfo, option string) *tgbotapi.InlineKeyboard
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: row}
 }
 
-func generate16_9Button(u *user.UserInfo, option string) *tgbotapi.InlineKeyboardMarkup {
+func generate16_9Button(u *UserInfo, option string) *tgbotapi.InlineKeyboardMarkup {
 	var row = make([][]tgbotapi.InlineKeyboardButton, 3)
 	if option == "640*384" {
 		row[0] = append(row[0], tgbotapi.NewInlineKeyboardButtonData("✅ 640*384", "setCfg:size:640*384"))
@@ -1153,7 +1145,7 @@ func generate16_9Button(u *user.UserInfo, option string) *tgbotapi.InlineKeyboar
 	}
 }
 
-func generate9_16Button(u *user.UserInfo, option string) *tgbotapi.InlineKeyboardMarkup {
+func generate9_16Button(u *UserInfo, option string) *tgbotapi.InlineKeyboardMarkup {
 	var row = make([][]tgbotapi.InlineKeyboardButton, 3)
 	if option == "384*640" {
 		row[0] = append(row[0], tgbotapi.NewInlineKeyboardButtonData("✅ 384*640", "setCfg:size:384*640"))
@@ -1185,7 +1177,7 @@ func generate9_16Button(u *user.UserInfo, option string) *tgbotapi.InlineKeyboar
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: row}
 }
 
-func generate1_1Button(u *user.UserInfo, option string) *tgbotapi.InlineKeyboardMarkup {
+func generate1_1Button(u *UserInfo, option string) *tgbotapi.InlineKeyboardMarkup {
 	var row = make([][]tgbotapi.InlineKeyboardButton, 4)
 	if option == "384*384" {
 		row[0] = append(row[0], tgbotapi.NewInlineKeyboardButtonData("✅ 384*384", "setCfg:size:384*384"))
@@ -1237,7 +1229,7 @@ func generate1_1Button(u *user.UserInfo, option string) *tgbotapi.InlineKeyboard
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: row}
 }
 
-func scaleButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup {
+func scaleButton(u *UserInfo) *tgbotapi.InlineKeyboardMarkup {
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData("+1", "setCfg:scale:+1"),
 		tgbotapi.NewInlineKeyboardButtonData("+3", "setCfg:scale:+3"),
@@ -1253,7 +1245,7 @@ func scaleButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup {
 		)}}
 }
 
-func stepsButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup {
+func stepsButton(u *UserInfo) *tgbotapi.InlineKeyboardMarkup {
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData("+1", "setCfg:steps:+1"),
 		tgbotapi.NewInlineKeyboardButtonData("+3", "setCfg:steps:+3"),
@@ -1307,14 +1299,14 @@ func gHelpLangButton() *tgbotapi.InlineKeyboardMarkup {
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: row}
 }
 
-func gShareButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup {
+func gShareButton(u *UserInfo) *tgbotapi.InlineKeyboardMarkup {
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData(u.LoadLang("enable"), `share:1`),
 		tgbotapi.NewInlineKeyboardButtonData(u.LoadLang("disable"), `share:0`),
 	)}}
 }
 
-func strengthButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup {
+func strengthButton(u *UserInfo) *tgbotapi.InlineKeyboardMarkup {
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData(`+0.01`, "setCfg:strength:+0.01"),
 		tgbotapi.NewInlineKeyboardButtonData(`+0.05`, "setCfg:strength:+0.05"),
@@ -1333,7 +1325,7 @@ func strengthButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup {
 
 }
 
-func reDrawButton(u *user.UserInfo) *tgbotapi.InlineKeyboardMarkup {
+func reDrawButton(u *UserInfo) *tgbotapi.InlineKeyboardMarkup {
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData(u.LoadLang("reDraw"), "reDraw"),
 		tgbotapi.NewInlineKeyboardButtonData(u.LoadLang("edit"), "editCfg"),

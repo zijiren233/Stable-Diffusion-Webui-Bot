@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/rand"
 	"regexp"
 	"strings"
 
+	"github.com/zijiren233/stable-diffusion-webui-bot/gconfig"
 	api "github.com/zijiren233/stable-diffusion-webui-bot/stable-diffusion-webui-api"
-	"github.com/zijiren233/stable-diffusion-webui-bot/user"
+	"github.com/zijiren233/stable-diffusion-webui-bot/utils"
 
 	tgbotapi "github.com/zijiren233/tg-bot-api/v6"
 )
@@ -42,7 +44,7 @@ func parseString2YamlStyle(s string) string {
 	for (strings.HasPrefix(s, `'`) && strings.HasSuffix(s, `'`)) || (strings.HasPrefix(s, `"`) && strings.HasSuffix(s, `"`)) {
 		s = s[1 : len(s)-1]
 	}
-	return strings.TrimLeft(api.ReplaceColon(s), `'"`)
+	return strings.TrimLeft(ReplaceColon(s), `'"`)
 }
 
 func (c *Config) Fomate2TgMdV2() []byte {
@@ -162,8 +164,240 @@ func (c *Config) Fomate2TgHTML() []byte {
 	return buffer.Bytes()
 }
 
-func (cfg *Config) CorrectCfg(u *user.UserInfo, gTag, gUc, transTag, transUc, gSeed bool) {
-	if u.Permissions() != user.T_Subscribe {
+func (h *Handler) ParseCfgScalse(scale int) int {
+	if scale <= 0 || scale > 30 {
+		return h.DefaultCfgScale
+	}
+	return scale
+}
+
+func (h *Handler) ParseSteps(steps int) int {
+	if steps < 15 || steps > 50 {
+		return h.DefaultSteps
+	}
+	return steps
+}
+
+func (h *Handler) ParseNum(num int) int {
+	if num <= 0 || num > h.MaxNum {
+		return h.DefaultNum
+	}
+	return num
+}
+
+func (h *Handler) ParsePreProcess(PreProcess string) string {
+	if PreProcess == "" {
+		return h.ControlPreProcess[0].Name
+	}
+	if _, ok := utils.In(h.ControlPreProcess, func(c gconfig.ControlPreProcess) bool {
+		return c.Name == PreProcess
+	}); !ok {
+		return h.ControlPreProcess[0].Name
+	}
+	return ""
+}
+
+func (h *Handler) ParseProcess(Process string) string {
+	if Process == "" {
+		return h.ControlProcess[0].Name
+	}
+	if _, ok := utils.In(h.ControlProcess, func(c gconfig.ControlProcess) bool {
+		return c.Name == Process
+	}); !ok {
+		return h.ControlProcess[0].Name
+	}
+	return ""
+}
+
+func (h *Handler) MODELFILETONAME(file string) (string, error) {
+	for _, m := range h.Models {
+		if m.File == file {
+			return m.Name, nil
+		}
+	}
+	return "", errors.New("find models error")
+}
+
+func (h *Handler) Name2Model(name string) (gconfig.Model, error) {
+	for _, v := range h.Models {
+		if v.Name == name {
+			return v, nil
+		}
+	}
+	return gconfig.Model{}, errors.New("find models error")
+}
+
+type CorrectConfig struct {
+	Tag       bool
+	Uc        bool
+	Photo     bool
+	CtrlPhoto bool
+	TransTag  bool
+	TransUc   bool
+	Seed      bool
+	Mode      bool
+	Model     bool
+}
+
+type ConfigFuncCorrentCfg func(*CorrectConfig)
+
+func WithMode() ConfigFuncCorrentCfg {
+	return func(c *CorrectConfig) {
+		c.Mode = true
+	}
+}
+
+func WithModel() ConfigFuncCorrentCfg {
+	return func(c *CorrectConfig) {
+		c.Model = true
+	}
+}
+
+func WithTag() ConfigFuncCorrentCfg {
+	return func(c *CorrectConfig) {
+		c.Tag = true
+	}
+}
+
+func WithUc() ConfigFuncCorrentCfg {
+	return func(c *CorrectConfig) {
+		c.Uc = true
+	}
+}
+
+func WithPhoto() ConfigFuncCorrentCfg {
+	return func(c *CorrectConfig) {
+		c.Photo = true
+	}
+}
+
+func WithCtrlPhoto() ConfigFuncCorrentCfg {
+	return func(c *CorrectConfig) {
+		c.CtrlPhoto = true
+	}
+}
+
+func WithTransTag() ConfigFuncCorrentCfg {
+	return func(c *CorrectConfig) {
+		c.TransTag = true
+	}
+}
+
+func WithTransUc() ConfigFuncCorrentCfg {
+	return func(c *CorrectConfig) {
+		c.TransUc = true
+	}
+}
+
+func WithSeed() ConfigFuncCorrentCfg {
+	return func(c *CorrectConfig) {
+		c.Seed = true
+	}
+}
+
+var parseRepeat, _ = regexp.Compile(`, *?,`)
+var replaceColonRe = regexp.MustCompile(`: *`)
+
+func ReplaceColon(s string) string {
+	return replaceColonRe.ReplaceAllString(s, ":")
+}
+
+func ReplaceString(src string) string {
+	if src == "" {
+		return ""
+	}
+	src = strings.ReplaceAll(src, "，", ",")
+	src = strings.ReplaceAll(src, "\n", ",")
+	src = strings.ReplaceAll(src, "（", "(")
+	src = strings.ReplaceAll(src, "）", ")")
+	for parseRepeat.MatchString(src) {
+		src = parseRepeat.ReplaceAllString(src, ",")
+	}
+	src = strings.TrimLeft(strings.TrimRight(src, ", "), ", ")
+	return replaceColonRe.ReplaceAllString(src, ":")
+}
+
+func generateUC(Uc string) string {
+	Uc = ReplaceString(Uc)
+	low := strings.ToLower(Uc)
+	if !strings.Contains(low, `lowres`) {
+		Uc = `lowres, ` + Uc
+	}
+	if !strings.Contains(low, `text`) {
+		Uc = `text, ` + Uc
+	}
+	return Uc
+}
+
+func generateTag(Tag string) string {
+	Tag = ReplaceString(Tag)
+	low := strings.ToLower(Tag)
+	if !strings.Contains(low, "best quality") {
+		Tag = "best quality, " + Tag
+	}
+	if !strings.Contains(low, "masterpiece") {
+		Tag = "masterpiece, " + Tag
+	}
+	return Tag
+}
+
+func (h *Handler) CorrectCfg(cfg *Config, u *UserInfo, c ...ConfigFuncCorrentCfg) {
+	config := &CorrectConfig{}
+	for _, f := range c {
+		f(config)
+	}
+	if config.CtrlPhoto {
+		if cfg.ControlPhotoID == "" || cfg.ControlPreprocess == "" || cfg.ControlProcess == "" {
+			cfg.ControlPreprocess = ""
+			cfg.ControlProcess = ""
+		} else {
+			cfg.ControlPreprocess = h.ParsePreProcess(cfg.ControlPreprocess)
+			cfg.ControlProcess = h.ParseProcess(cfg.ControlProcess)
+		}
+	}
+	if config.Photo {
+		if cfg.PrePhotoID == "" {
+			cfg.Strength = 0
+		} else if cfg.Strength < 0 || cfg.Strength >= 1 {
+			cfg.Strength = 0.70
+		}
+	}
+	cfg.CfgScale = h.ParseCfgScalse(cfg.CfgScale)
+	if config.Seed && cfg.Seed == 0 {
+		cfg.Seed = uint32(rand.Intn(math.MaxUint32))
+	}
+	if config.Model {
+		m, err := h.Name2Model(cfg.Model)
+		if err != nil {
+			cfg.Model = h.Models[0].Name
+		} else {
+			cfg.Model = m.Name
+		}
+	}
+	if config.Tag {
+		cfg.Tag = generateTag(cfg.Tag)
+	}
+	if config.TransTag {
+		cfg.Tag = utils.Translate(cfg.Tag)
+	}
+	if config.Uc {
+		cfg.Uc = generateUC(cfg.Uc)
+	}
+	if config.TransUc {
+		cfg.Uc = utils.Translate(cfg.Uc)
+	}
+	if u == nil {
+		cfg.Steps = h.ParseSteps(cfg.Steps)
+		cfg.Num = h.ParseNum(cfg.Num)
+		if cfg.Height < 64 || cfg.Width < 64 {
+			cfg.Width = 512
+			cfg.Height = 768
+		} else if sum := cfg.Height * cfg.Width; sum > h.ImgMaxSize {
+			a := math.Pow(float64(sum)/float64(h.ImgMaxSize), 0.5)
+			cfg.Width = int(float64(cfg.Width) / a)
+			cfg.Height = int(float64(cfg.Height) / a)
+		}
+	} else if u.Permissions() != T_Subscribe {
 		if cfg.Steps > 28 {
 			cfg.Steps = 28
 		}
@@ -175,18 +409,22 @@ func (cfg *Config) CorrectCfg(u *user.UserInfo, gTag, gUc, transTag, transUc, gS
 			cfg.Width = int(float64(cfg.Width) / a)
 			cfg.Height = int(float64(cfg.Height) / a)
 		}
-		cfg.Width -= cfg.Width % 8
-		cfg.Height -= cfg.Height % 8
 	}
-	cfg.DrawConfig.CorrectCfg(gTag, gUc, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32, transTag, transUc, gSeed)
+	cfg.Width -= cfg.Width % 8
+	cfg.Height -= cfg.Height % 8
+	if config.Mode {
+		if _, ok := utils.InString(cfg.Mode, h.mode); !ok {
+			cfg.Mode = h.mode[0]
+		}
+	}
 }
 
-func (h *Handler) getConfig(u *user.UserInfo, cfg *Config, replyMsgId int) (err error) {
+func (h *Handler) getConfig(u *UserInfo, cfg *Config, replyMsgId int) (err error) {
 	if cfg == nil {
 		return errors.New("cfg is nil")
 	}
-	panel := panelButton(u, len(cfg.PrePhotoID) == 32, len(cfg.ControlPhotoID) == 32)
-	cfg.CorrectCfg(u, true, true, false, false, true)
+	panel := panelButton(u, cfg.PrePhotoID != "", cfg.ControlPhotoID != "")
+	h.CorrectCfg(cfg, u)
 	// b, err := yaml.Marshal(cfg)
 	// if err != nil {
 	// 	return err
@@ -199,4 +437,27 @@ func (h *Handler) getConfig(u *user.UserInfo, cfg *Config, replyMsgId int) (err 
 	mc.DisableWebPagePreview = false
 	_, err = h.bot.Send(mc)
 	return err
+}
+
+func (h *Handler) DefaultConfig() *api.DrawConfig {
+	return &api.DrawConfig{
+		Width:    512,
+		Height:   768,
+		Num:      1,
+		Strength: 0.70,
+		Mode:     h.DefaultMode,
+		Steps:    h.DefaultSteps,
+		CfgScale: h.DefaultCfgScale,
+		Uc:       h.DefaultUC,
+		Model:    h.Models[0].Name,
+	}
+}
+
+func (h *Handler) Name2Process(name string) (gconfig.ControlProcess, error) {
+	for _, v := range h.ControlProcess {
+		if v.Name == name {
+			return v, nil
+		}
+	}
+	return gconfig.ControlProcess{}, errors.New("cannot find process")
 }

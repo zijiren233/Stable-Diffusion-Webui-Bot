@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"net/http"
 	"os"
 	"path"
@@ -17,19 +16,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zijiren233/stable-diffusion-webui-bot/gconfig"
 	"github.com/zijiren233/stable-diffusion-webui-bot/utils"
 
 	"github.com/panjf2000/ants/v2"
 	"github.com/zijiren233/go-colorlog"
 )
-
-var drawPool, _ = ants.NewPool(1, ants.WithOptions(ants.Options{PreAlloc: false, Logger: nil, DisablePurge: false, Nonblocking: false, PanicHandler: func(i interface{}) {
-	colorlog.Fatal(utils.PrintStackTrace(i))
-}}))
-
-var waitGloup = make(chan func(), math.MaxInt16)
-var freeWaitGloup = make(chan func(), math.MaxInt16)
 
 type Resoult struct {
 	Err     error
@@ -41,9 +32,9 @@ func (cfg *config) Draw(ctx context.Context, free bool) <-chan *Resoult {
 	resoult := make(chan *Resoult, 1)
 	cfg.resoultChan = resoult
 	if free {
-		freeWaitGloup <- cfg.draw
+		cfg.a.freeWaitGloup <- cfg.draw
 	} else {
-		waitGloup <- cfg.draw
+		cfg.a.waitGloup <- cfg.draw
 	}
 	return resoult
 }
@@ -85,9 +76,9 @@ func (cfg *superResolutionCfg) SuperResolution(ctx context.Context, free bool) <
 	resoult := make(chan *Resoult, 1)
 	cfg.resoultChan = resoult
 	if free {
-		freeWaitGloup <- cfg.superResolution
+		cfg.a.freeWaitGloup <- cfg.superResolution
 	} else {
-		waitGloup <- cfg.superResolution
+		cfg.a.waitGloup <- cfg.superResolution
 	}
 	return resoult
 }
@@ -97,9 +88,9 @@ func (cfg *ctrlPhotoCfg) CtrlPhoto(ctx context.Context, free bool) <-chan *Resou
 	resoult := make(chan *Resoult, 1)
 	cfg.resoultChan = resoult
 	if free {
-		freeWaitGloup <- cfg.ctrlPhoto
+		cfg.a.freeWaitGloup <- cfg.ctrlPhoto
 	} else {
-		waitGloup <- cfg.ctrlPhoto
+		cfg.a.waitGloup <- cfg.ctrlPhoto
 	}
 	return resoult
 }
@@ -125,7 +116,7 @@ func (cfg *config) draw() {
 	if err != nil {
 		return
 	}
-	api, done := next(cfg.rawCfg.Model)
+	api, done := cfg.a.next(cfg.rawCfg.Model)
 	defer done()
 	colorlog.Debug("get api: ", api.Url)
 	cfg.api = struct {
@@ -178,7 +169,7 @@ func (cfg *superResolutionCfg) superResolution() {
 	if err != nil {
 		return
 	}
-	api, done := next("")
+	api, done := cfg.a.next("")
 	defer done()
 	colorlog.Debug("get api: ", api.Url)
 	err = api.ChangeOption("")
@@ -212,7 +203,7 @@ func (cfg *ctrlPhotoCfg) ctrlPhoto() {
 	if err != nil {
 		return
 	}
-	api, done := next("")
+	api, done := cfg.a.next("")
 	defer done()
 	colorlog.Debug("get api: ", api.Url)
 	err = api.ChangeOption("")
@@ -246,7 +237,7 @@ func (cfg *interrogateCfg) interrogate() {
 	if err != nil {
 		return
 	}
-	api, done := next("")
+	api, done := cfg.a.next("")
 	defer done()
 	colorlog.Debug("get api: ", api.Url)
 	err = api.ChangeOption("")
@@ -320,17 +311,17 @@ func parseData(rowData io.Reader) ([][]byte, error) {
 	return datas, nil
 }
 
-func back() {
-	defer drawPool.Release()
+func (api *API) back() {
+	defer api.drawPool.Release()
 	for {
 		select {
-		case run := <-waitGloup:
-			drawPool.Submit(run)
+		case run := <-api.waitGloup:
+			api.drawPool.Submit(run)
 		default:
-			if drawPool.Free() > 0 {
+			if api.drawPool.Free() > 0 {
 				select {
-				case run := <-freeWaitGloup:
-					drawPool.Submit(run)
+				case run := <-api.freeWaitGloup:
+					api.drawPool.Submit(run)
 				default:
 					time.Sleep(time.Millisecond * 10)
 				}
@@ -341,16 +332,16 @@ func back() {
 	}
 }
 
-func DrawPoolCap() int {
-	return drawPool.Cap()
+func (api *API) DrawPoolCap() int {
+	return api.drawPool.Cap()
 }
 
-func DrawFree() int {
-	return drawPool.Free()
+func (api *API) DrawFree() int {
+	return api.drawPool.Free()
 }
 
-func DrawWait() int {
-	return len(waitGloup) + len(freeWaitGloup)
+func (api *API) DrawWait() int {
+	return len(api.waitGloup) + len(api.freeWaitGloup)
 }
 
 type photoExif struct {
@@ -452,7 +443,7 @@ func GetImgCfg(photo []byte) (*DrawConfig, error) {
 		if f, err := strconv.ParseFloat(dataMap["CFG scale"], 64); err == nil {
 			exif.Scale = f
 		}
-		exif.Model = gconfig.MODELFILETONAME(dataMap["Model"])
+		exif.Model = dataMap["Model"]
 		exif.Sampler = dataMap["Sampler"]
 		if i, err := strconv.ParseInt(dataMap["Steps"], 10, 64); err == nil {
 			exif.Steps = int(i)
@@ -477,6 +468,5 @@ func GetImgCfg(photo []byte) (*DrawConfig, error) {
 	}
 	exif.Width, exif.Height, _ = utils.GetPhotoSize(photo)
 	cfg := &DrawConfig{Seed: exif.Seed, Steps: exif.Steps, Model: exif.Model, CfgScale: int(exif.Scale), Num: 0, Tag: exif.Tag, Mode: exif.Sampler, Width: exif.Width, Height: exif.Height, Uc: exif.Uc}
-	cfg.CorrectCfg(true, true, false, false, false, false, false)
 	return cfg, nil
 }

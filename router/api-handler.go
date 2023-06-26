@@ -18,7 +18,6 @@ import (
 	"github.com/zijiren233/stable-diffusion-webui-bot/handler"
 	"github.com/zijiren233/stable-diffusion-webui-bot/i18n"
 	api "github.com/zijiren233/stable-diffusion-webui-bot/stable-diffusion-webui-api"
-	"github.com/zijiren233/stable-diffusion-webui-bot/user"
 
 	"github.com/gin-gonic/gin"
 	"github.com/zijiren233/go-colorlog"
@@ -40,9 +39,9 @@ type Resp struct {
 // @Param        code   path      string  true  "Language code"
 // @Success      200  {object}  I18NS
 // @Router       /i18n/{code} [get]
-func i18nYaml(ctx *gin.Context) {
+func (r *Router) i18nYaml(ctx *gin.Context) {
 	code := strings.Trim(ctx.Param("code"), "/")
-	groups := gconfig.ExtraModelGroup()
+	groups := r.handler.ExtraModelAllGroup
 	var alli18ns I18NS
 	allLang := i18n.LoadAllExtraLang(code)
 	for _, group := range groups {
@@ -87,9 +86,9 @@ func i18nYaml(ctx *gin.Context) {
 // @Param        code   path      string  true  "Language code"
 // @Success      200  body  I18NS
 // @Router       /i18n-json/{code} [get]
-func i18nJson(ctx *gin.Context) {
+func (r *Router) i18nJson(ctx *gin.Context) {
 	code := strings.Trim(ctx.Param("code"), "/")
-	groups := gconfig.ExtraModelGroup()
+	groups := r.handler.ExtraModelAllGroup
 	var alli18ns I18NS
 	allLang := i18n.LoadAllExtraLang(code)
 	for _, group := range groups {
@@ -139,10 +138,10 @@ func models(ctx *gin.Context) {
 // @Produce      json
 // @Success      200  {object}  Resp
 // @Router       /extra-model-groups [get]
-func extraModelGroups(ctx *gin.Context) {
+func (r *Router) extraModelGroups(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, Resp{
 		Time: time.Now().Unix(),
-		Data: gconfig.ExtraModelGroup(),
+		Data: r.handler.ExtraModelAllGroup,
 	})
 }
 
@@ -252,10 +251,10 @@ func controlProcess(ctx *gin.Context) {
 // @Produce      json
 // @Success      200  {object}  Resp
 // @Router       /modes [get]
-func allModels(ctx *gin.Context) {
+func (r *Router) allModels(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, Resp{
 		Time: time.Now().Unix(),
-		Data: api.AllMode(),
+		Data: r.handler.Models,
 	})
 }
 
@@ -269,7 +268,7 @@ func allModels(ctx *gin.Context) {
 // @Success      200  {object}  Resp
 // @Failure      500  {object}  Resp
 // @Router       /test-draw-config [post]
-func testDrawConfig(ctx *gin.Context) {
+func (r *Router) testDrawConfig(ctx *gin.Context) {
 	cfg := new(Any2Img)
 	err := json.NewDecoder(ctx.Request.Body).Decode(cfg)
 	if err != nil && err != io.EOF {
@@ -298,7 +297,15 @@ func testDrawConfig(ctx *gin.Context) {
 		ctx.Abort()
 		return
 	}
-	cfg.CorrectCfg(true, true, len(photo) != 0, len(ctrlphoto) != 0, false, false, true)
+	tmpCfg := &handler.Config{DrawConfig: cfg.DrawConfig}
+	arges := []handler.ConfigFuncCorrentCfg{handler.WithMode(), handler.WithModel(), handler.WithSeed()}
+	if len(photo) != 0 {
+		arges = append(arges, handler.WithPhoto())
+	}
+	if len(ctrlphoto) != 0 {
+		arges = append(arges, handler.WithCtrlPhoto())
+	}
+	r.handler.CorrectCfg(tmpCfg, nil, arges...)
 	var data = struct {
 		Cfg           api.DrawConfig `json:"config"`
 		Pre_photo     bool           `json:"pre_photo"`
@@ -331,8 +338,8 @@ func (r *Router) drawPost(ctx *gin.Context) {
 		authErr(ctx)
 		return
 	}
-	UserInfo := u.(*user.UserInfo)
-	if UserInfo.Permissions() == user.T_Prohibit {
+	UserInfo := u.(*handler.UserInfo)
+	if UserInfo.Permissions() == handler.T_Prohibit {
 		ctx.JSON(http.StatusInternalServerError, Resp{
 			Time: time.Now().Unix(),
 			Err:  UserInfo.ProhibitString(r.handler.Bot()),
@@ -340,7 +347,7 @@ func (r *Router) drawPost(ctx *gin.Context) {
 		ctx.Abort()
 		return
 	}
-	task, err := UserInfo.AddTask(user.T_Draw)
+	task, err := UserInfo.AddTask(handler.T_Draw)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, Resp{
 			Time: time.Now().Unix(),
@@ -382,7 +389,7 @@ func (r *Router) drawPost(ctx *gin.Context) {
 		ctx.Abort()
 		return
 	}
-	c, err := api.New(&cfg.DrawConfig, photo, ctrlphoto, true)
+	c, err := r.handler.Api.New(&cfg.DrawConfig, photo, ctrlphoto)
 	if err != nil {
 		task.Down()
 		ctx.JSON(http.StatusInternalServerError, Resp{
@@ -405,7 +412,7 @@ func (r *Router) drawPost(ctx *gin.Context) {
 		Time: time.Now().Unix(),
 		Data: data,
 	})
-	task.Set("result", c.Draw(ct, UserInfo.Permissions() != user.T_Subscribe))
+	task.Set("result", c.Draw(ct, UserInfo.Permissions() != handler.T_Subscribe))
 	task.Set("status", c.Status)
 }
 
@@ -424,8 +431,8 @@ func (r *Router) drawGet(ctx *gin.Context) {
 		authErr(ctx)
 		return
 	}
-	UserInfo := u.(*user.UserInfo)
-	if UserInfo.Permissions() == user.T_Prohibit {
+	UserInfo := u.(*handler.UserInfo)
+	if UserInfo.Permissions() == handler.T_Prohibit {
 		ctx.JSON(http.StatusInternalServerError, Resp{
 			Time: time.Now().Unix(),
 			Err:  UserInfo.ProhibitString(r.handler.Bot()),
@@ -433,7 +440,7 @@ func (r *Router) drawGet(ctx *gin.Context) {
 		ctx.Abort()
 		return
 	}
-	task, err := user.GetTask(UserInfo.UserInfo.UserID, user.T_Draw)
+	task, err := handler.GetTask(UserInfo.UserInfo.UserID, handler.T_Draw)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, Resp{
 			Time: time.Now().Unix(),
@@ -460,7 +467,7 @@ func (r *Router) drawGet(ctx *gin.Context) {
 				Err:  "Internal Server Error",
 			})
 		} else {
-			if UserInfo.Permissions() == user.T_Guest {
+			if UserInfo.Permissions() == handler.T_Guest {
 				UserInfo.UseFree(1)
 			}
 			msg := []string{}
@@ -490,8 +497,8 @@ func (r *Router) interrupt(ctx *gin.Context) {
 		authErr(ctx)
 		return
 	}
-	UserInfo := u.(*user.UserInfo)
-	if UserInfo.Permissions() == user.T_Prohibit {
+	UserInfo := u.(*handler.UserInfo)
+	if UserInfo.Permissions() == handler.T_Prohibit {
 		ctx.JSON(http.StatusInternalServerError, Resp{
 			Time: time.Now().Unix(),
 			Err:  UserInfo.ProhibitString(r.handler.Bot()),
@@ -499,7 +506,7 @@ func (r *Router) interrupt(ctx *gin.Context) {
 		ctx.Abort()
 		return
 	}
-	task, err := user.GetTask(UserInfo.UserInfo.UserID, user.T_Draw)
+	task, err := handler.GetTask(UserInfo.UserInfo.UserID, handler.T_Draw)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, Resp{
 			Time: time.Now().Unix(),
@@ -539,8 +546,8 @@ func (r *Router) detectCtrlPhotoPost(ctx *gin.Context) {
 		authErr(ctx)
 		return
 	}
-	UserInfo := u.(*user.UserInfo)
-	if UserInfo.Permissions() == user.T_Prohibit {
+	UserInfo := u.(*handler.UserInfo)
+	if UserInfo.Permissions() == handler.T_Prohibit {
 		ctx.JSON(http.StatusInternalServerError, Resp{
 			Time: time.Now().Unix(),
 			Err:  UserInfo.ProhibitString(r.handler.Bot()),
@@ -548,7 +555,7 @@ func (r *Router) detectCtrlPhotoPost(ctx *gin.Context) {
 		ctx.Abort()
 		return
 	}
-	task, err := UserInfo.AddTask(user.T_CtrlPhoto)
+	task, err := UserInfo.AddTask(handler.T_CtrlPhoto)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, Resp{
 			Time: time.Now().Unix(),
@@ -577,7 +584,7 @@ func (r *Router) detectCtrlPhotoPost(ctx *gin.Context) {
 		ctx.Abort()
 		return
 	}
-	c, err := api.NewCtrlPhotoWithBash64(cfg.ControlPhoto, cfg.PreProcessor, cfg.ResSize)
+	c, err := r.handler.Api.NewCtrlPhotoWithBash64(cfg.ControlPhoto, cfg.PreProcessor, cfg.ResSize)
 	if err != nil {
 		task.Down()
 		ctx.JSON(http.StatusInternalServerError, Resp{
@@ -591,7 +598,7 @@ func (r *Router) detectCtrlPhotoPost(ctx *gin.Context) {
 		Time: time.Now().Unix(),
 		Data: "pls get /api/detect-ctrl-photo",
 	})
-	task.Set("result", c.CtrlPhoto(context.Background(), UserInfo.Permissions() != user.T_Subscribe))
+	task.Set("result", c.CtrlPhoto(context.Background(), UserInfo.Permissions() != handler.T_Subscribe))
 }
 
 // Detect
@@ -609,8 +616,8 @@ func (r *Router) detectCtrlPhotoGet(ctx *gin.Context) {
 		authErr(ctx)
 		return
 	}
-	UserInfo := u.(*user.UserInfo)
-	if UserInfo.Permissions() == user.T_Prohibit {
+	UserInfo := u.(*handler.UserInfo)
+	if UserInfo.Permissions() == handler.T_Prohibit {
 		ctx.JSON(http.StatusInternalServerError, Resp{
 			Time: time.Now().Unix(),
 			Err:  UserInfo.ProhibitString(r.handler.Bot()),
@@ -618,7 +625,7 @@ func (r *Router) detectCtrlPhotoGet(ctx *gin.Context) {
 		ctx.Abort()
 		return
 	}
-	task, err := user.GetTask(UserInfo.UserInfo.UserID, user.T_CtrlPhoto)
+	task, err := handler.GetTask(UserInfo.UserInfo.UserID, handler.T_CtrlPhoto)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, Resp{
 			Time: time.Now().Unix(),
@@ -644,7 +651,7 @@ func (r *Router) detectCtrlPhotoGet(ctx *gin.Context) {
 				Err:  "Internal Server Error",
 			})
 		} else {
-			if UserInfo.Permissions() == user.T_Guest {
+			if UserInfo.Permissions() == handler.T_Guest {
 				UserInfo.UseFree(1)
 			}
 			msg := []string{}
@@ -681,8 +688,8 @@ func (r *Router) superResolutionPost(ctx *gin.Context) {
 		authErr(ctx)
 		return
 	}
-	UserInfo := u.(*user.UserInfo)
-	if UserInfo.Permissions() == user.T_Prohibit {
+	UserInfo := u.(*handler.UserInfo)
+	if UserInfo.Permissions() == handler.T_Prohibit {
 		ctx.JSON(http.StatusInternalServerError, Resp{
 			Time: time.Now().Unix(),
 			Err:  UserInfo.ProhibitString(r.handler.Bot()),
@@ -690,7 +697,7 @@ func (r *Router) superResolutionPost(ctx *gin.Context) {
 		ctx.Abort()
 		return
 	}
-	task, err := UserInfo.AddTask(user.T_SuperResolution)
+	task, err := UserInfo.AddTask(handler.T_SuperResolution)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, Resp{
 			Time: time.Now().Unix(),
@@ -732,7 +739,7 @@ func (r *Router) superResolutionPost(ctx *gin.Context) {
 			return
 		}
 	}
-	c, err := api.NewSuperResolutionWithBase64(cfg.Photo, cfg.Multiplier)
+	c, err := r.handler.Api.NewSuperResolutionWithBase64(cfg.Photo, cfg.Multiplier)
 	if err != nil {
 		task.Down()
 		ctx.JSON(http.StatusInternalServerError, Resp{
@@ -746,7 +753,7 @@ func (r *Router) superResolutionPost(ctx *gin.Context) {
 		Time: time.Now().Unix(),
 		Data: "pls get /api/superResolution",
 	})
-	task.Set("result", c.SuperResolution(ct, UserInfo.Permissions() != user.T_Subscribe))
+	task.Set("result", c.SuperResolution(ct, UserInfo.Permissions() != handler.T_Subscribe))
 }
 
 // SuperResolution
@@ -764,8 +771,8 @@ func (r *Router) superResolutionGet(ctx *gin.Context) {
 		authErr(ctx)
 		return
 	}
-	UserInfo := u.(*user.UserInfo)
-	if UserInfo.Permissions() == user.T_Prohibit {
+	UserInfo := u.(*handler.UserInfo)
+	if UserInfo.Permissions() == handler.T_Prohibit {
 		ctx.JSON(http.StatusInternalServerError, Resp{
 			Time: time.Now().Unix(),
 			Err:  UserInfo.ProhibitString(r.handler.Bot()),
@@ -773,7 +780,7 @@ func (r *Router) superResolutionGet(ctx *gin.Context) {
 		ctx.Abort()
 		return
 	}
-	task, err := user.GetTask(UserInfo.UserInfo.UserID, user.T_SuperResolution)
+	task, err := handler.GetTask(UserInfo.UserInfo.UserID, handler.T_SuperResolution)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, Resp{
 			Time: time.Now().Unix(),
@@ -799,7 +806,7 @@ func (r *Router) superResolutionGet(ctx *gin.Context) {
 				Err:  "Internal Server Error",
 			})
 		} else {
-			if UserInfo.Permissions() == user.T_Guest {
+			if UserInfo.Permissions() == handler.T_Guest {
 				UserInfo.UseFree(1)
 			}
 			msg := []string{}
@@ -832,7 +839,7 @@ type ImagesData struct {
 // @Success      200  {object}  Resp
 // @Failure      500  {object}  Resp
 // @Router       /search-images [get]
-func searchImages(ctx *gin.Context) {
+func (r *Router) searchImages(ctx *gin.Context) {
 	dataBucket.Wait(ctx)
 	keyWord := ctx.Query("keywords")
 	var photo []db.PhotoInfo
@@ -861,7 +868,7 @@ func searchImages(ctx *gin.Context) {
 			Time = parseT
 		}
 		kw := strings.Split(strings.ReplaceAll(keyWord, "，", ","), ",")
-		photo, err = db.FindImg(db.FindConfig{
+		photo, err = r.handler.DB.FindImg(db.FindConfig{
 			Deadline: Time,
 			Order:    "id desc",
 			Limit:    20,
@@ -873,11 +880,11 @@ func searchImages(ctx *gin.Context) {
 			return
 		}
 		if ctx.Query("maxcount") == "true" {
-			maxCount = db.GetMaxCount(db.MaxCountCfg{Deadline: Time, User_id: nil, Keywords: kw})
+			maxCount = r.handler.DB.GetMaxCount(db.MaxCountCfg{Deadline: Time, User_id: nil, Keywords: kw})
 		}
 	default:
 		var err error
-		photo, err = db.FindImg(db.FindConfig{
+		photo, err = r.handler.DB.FindImg(db.FindConfig{
 			Deadline: time.Now(),
 			Order:    "RANDOM()",
 			Limit:    20,
@@ -921,13 +928,13 @@ func searchImages(ctx *gin.Context) {
 // @Success      200  {object}  Resp
 // @Failure      500  {object}  Resp
 // @Router       /search-user-images [get]
-func searchUserImages(ctx *gin.Context) {
+func (r *Router) searchUserImages(ctx *gin.Context) {
 	u, exists := ctx.Get("user")
 	if !exists {
 		authErr(ctx)
 		return
 	}
-	UserInfo := u.(*user.UserInfo)
+	UserInfo := u.(*handler.UserInfo)
 	dataBucket.Wait(ctx)
 	keyWord := ctx.Query("keywords")
 	var photo []db.PhotoInfo
@@ -956,7 +963,7 @@ func searchUserImages(ctx *gin.Context) {
 			Time = parseT
 		}
 		kw := strings.Split(strings.ReplaceAll(keyWord, "，", ","), ",")
-		photo, err = db.FindImg(db.FindConfig{
+		photo, err = r.handler.DB.FindImg(db.FindConfig{
 			Deadline: Time,
 			Order:    "id desc",
 			User_id:  UserInfo.UserInfo.UserID,
@@ -969,11 +976,11 @@ func searchUserImages(ctx *gin.Context) {
 			return
 		}
 		if ctx.Query("maxcount") == "true" {
-			maxCount = db.GetMaxCount(db.MaxCountCfg{Deadline: Time, User_id: UserInfo.UserInfo.UserID, Keywords: kw})
+			maxCount = r.handler.DB.GetMaxCount(db.MaxCountCfg{Deadline: Time, User_id: UserInfo.UserInfo.UserID, Keywords: kw})
 		}
 	default:
 		var err error
-		photo, err = db.FindImg(db.FindConfig{
+		photo, err = r.handler.DB.FindImg(db.FindConfig{
 			Deadline: time.Now(),
 			Order:    "RANDOM()",
 			User_id:  UserInfo.UserInfo.UserID,

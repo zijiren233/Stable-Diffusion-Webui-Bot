@@ -2,14 +2,19 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"path"
+	"sort"
 
 	"github.com/panjf2000/ants/v2"
 	"github.com/zijiren233/go-colorlog"
 	"github.com/zijiren233/stable-diffusion-webui-bot/cache"
+	"github.com/zijiren233/stable-diffusion-webui-bot/db"
+	"github.com/zijiren233/stable-diffusion-webui-bot/gconfig"
+	api "github.com/zijiren233/stable-diffusion-webui-bot/stable-diffusion-webui-api"
 	"github.com/zijiren233/stable-diffusion-webui-bot/utils"
 	tgbotapi "github.com/zijiren233/tg-bot-api/v6"
 )
@@ -23,9 +28,86 @@ type Handler struct {
 	webhookHandler func(w http.ResponseWriter, r *http.Request)
 	webhookEnabled bool
 	cache          cache.Cache
+	Api            *api.API
+	DB             *db.DB
+	UserHandler    *UserHandler
+
+	mode                                                                      []string
+	Models                                                                    []gconfig.Model
+	MaxHFSteps, MaxNum, DefaultCfgScale, DefaultSteps, DefaultNum, ImgMaxSize int
+	DefaultUC, DefaultMode                                                    string
+	ControlPreProcess                                                         []gconfig.ControlPreProcess
+	ControlProcess                                                            []gconfig.ControlProcess
+	ExtraModel                                                                []gconfig.ExtraModel
+	extraModelWithGroup                                                       map[string][]gconfig.ExtraModel
+	ExtraModelAllGroup                                                        []string
+
+	guide, group string
 }
 
+const (
+	MaxHFSteps      = 20
+	MaxNum          = 9
+	DefaultCfgScale = 9
+	DefaultSteps    = 20
+	DefaultNum      = 1
+)
+
 type ConfigFunc func(h *Handler)
+
+func WithExtraModel(ExtraModel []gconfig.ExtraModel) ConfigFunc {
+	return func(api *Handler) {
+		api.ExtraModel = ExtraModel
+	}
+}
+
+func WithModes(mode []string) ConfigFunc {
+	return func(api *Handler) {
+		api.mode = mode
+	}
+}
+
+func WithImgMaxSize(ImgMaxSize int) ConfigFunc {
+	return func(api *Handler) {
+		api.ImgMaxSize = ImgMaxSize
+	}
+}
+
+func WithModels(models []gconfig.Model) ConfigFunc {
+	return func(api *Handler) {
+		api.Models = models
+	}
+}
+
+func WithMaxHFSteps(MaxHFSteps int) ConfigFunc {
+	return func(api *Handler) {
+		api.MaxHFSteps = MaxHFSteps
+	}
+}
+
+func WithMaxNum(MaxNum int) ConfigFunc {
+	return func(api *Handler) {
+		api.MaxNum = MaxNum
+	}
+}
+
+func WithDefaultCfgScale(DefaultCfgScale int) ConfigFunc {
+	return func(api *Handler) {
+		api.DefaultCfgScale = DefaultCfgScale
+	}
+}
+
+func WithDefaultSteps(DefaultSteps int) ConfigFunc {
+	return func(api *Handler) {
+		api.DefaultSteps = DefaultSteps
+	}
+}
+
+func WithDefaultNum(DefaultNum int) ConfigFunc {
+	return func(api *Handler) {
+		api.DefaultNum = DefaultNum
+	}
+}
 
 // https only
 func WithWebhook(webhookHost string) ConfigFunc {
@@ -40,11 +122,37 @@ func WithCache(cache cache.Cache) ConfigFunc {
 	return func(h *Handler) { h.cache = cache }
 }
 
-func New(tgToken string, configs ...ConfigFunc) (*Handler, error) {
-	h := &Handler{tgToken: tgToken}
+var allMode = [...]string{"DPM++ 2M Karras", "DPM++ 2M SDE Karras", "DPM++ SDE Karras", "Euler a", "DPM2", "DPM adaptive", "DPM2 a Karras", "DPM2 Karras", "DPM++ 2M", "DPM++ 2S a", "DPM++ 2S a Karras", "DPM++ SDE", "LMS Karras", "Euler", "DDIM", "Heun", "UniPC"}
+
+func New(tgToken string, api *api.API, db *db.DB, configs ...ConfigFunc) (*Handler, error) {
+	if api == nil {
+		return nil, errors.New("api is nil")
+	}
+	if db == nil {
+		return nil, errors.New("db is nil")
+	}
+	h := &Handler{tgToken: tgToken, Api: api, DB: db, mode: allMode[:], MaxHFSteps: MaxHFSteps, MaxNum: MaxNum, DefaultCfgScale: DefaultCfgScale, DefaultSteps: DefaultSteps, DefaultNum: DefaultNum}
 	for _, cf := range configs {
 		cf(h)
 	}
+
+	h.extraModelWithGroup = make(map[string][]gconfig.ExtraModel)
+	if len(h.ExtraModel) != 0 {
+		for _, v := range h.ExtraModel {
+			if v.Type == "" {
+				v.Type = "lora"
+			}
+			for _, g := range v.Group {
+				h.extraModelWithGroup[g] = append(h.extraModelWithGroup[g], v)
+				if _, ok := utils.InString(g, h.ExtraModelAllGroup); !ok {
+					h.ExtraModelAllGroup = append(h.ExtraModelAllGroup, g)
+				}
+			}
+		}
+		sort.Strings(h.ExtraModelAllGroup)
+	}
+
+	h.UserHandler = NewUserHandler(h, db.DB())
 
 	bot, err := tgbotapi.NewBotAPI(tgToken)
 	if err != nil {
@@ -212,5 +320,26 @@ func (h *Handler) SetCommand() {
 		cmds.Scope = &owner
 		h.bot.Send(cmds)
 	}
+}
 
+func (h *Handler) GroupIndex2ExtraModels(groupIndex int) []gconfig.ExtraModel {
+	s := h.ExtraModelAllGroup
+	if groupIndex < 0 {
+		return h.extraModelWithGroup[s[0]]
+	} else if groupIndex+1 > len(s) {
+		return h.extraModelWithGroup[s[len(s)-1]]
+	} else {
+		return h.extraModelWithGroup[s[groupIndex]]
+	}
+}
+
+func (h *Handler) Index2ExtraModel(GroupIndex, LoraIndex int) gconfig.ExtraModel {
+	s := h.GroupIndex2ExtraModels(GroupIndex)
+	if LoraIndex < 0 {
+		return s[0]
+	} else if LoraIndex+1 > len(s) {
+		return s[len(s)-1]
+	} else {
+		return s[LoraIndex]
+	}
 }

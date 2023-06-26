@@ -25,8 +25,8 @@ type MaxCountCfg struct {
 	KeywordsRe []string // Not support sqlite
 }
 
-func FindImg(cfg FindConfig) ([]PhotoInfo, error) {
-	var db = db
+func (d *DB) FindImg(cfg FindConfig) ([]PhotoInfo, error) {
+	var db = d.db
 	db = db.Where("updated_at <= ?", cfg.Deadline.Format("2006-01-02 15:04:05"))
 	if len(cfg.SelectKey) == 0 {
 		db = db.Select(selectKey[:])
@@ -48,13 +48,13 @@ func FindImg(cfg FindConfig) ([]PhotoInfo, error) {
 		if v == "" {
 			continue
 		}
-		if dbType == T_POSTGRESQL {
+		if d.dbType == T_POSTGRESQL {
 			db = db.Where("tag ILIKE ?", fmt.Sprint(`%`, v, `%`))
 		} else {
 			db = db.Where("tag LIKE ?", fmt.Sprint(`%`, v, `%`))
 		}
 	}
-	if dbType == T_POSTGRESQL {
+	if d.dbType == T_POSTGRESQL {
 		for _, v := range cfg.KeywordsRe {
 			v = strings.TrimSpace(v)
 			if v == "" {
@@ -64,12 +64,12 @@ func FindImg(cfg FindConfig) ([]PhotoInfo, error) {
 		}
 	}
 	var photo = []PhotoInfo{}
-	d := db.Find(&photo)
-	return photo, d.Error
+	data := db.Find(&photo)
+	return photo, data.Error
 }
 
-func GetMaxCount(cfg MaxCountCfg) int64 {
-	var db = db
+func (d *DB) GetMaxCount(cfg MaxCountCfg) int64 {
+	var db = d.db
 	db = db.Where("updated_at <= ?", cfg.Deadline.Format("2006-01-02 15:04:05"))
 	db = db.Select("count(id)")
 	db = db.Limit(1)
@@ -84,13 +84,13 @@ func GetMaxCount(cfg MaxCountCfg) int64 {
 		if v == "" {
 			continue
 		}
-		if dbType == T_POSTGRESQL {
+		if d.dbType == T_POSTGRESQL {
 			db = db.Where("tag ILIKE ?", fmt.Sprint(`%`, v, `%`))
 		} else {
 			db = db.Where("tag LIKE ?", fmt.Sprint(`%`, v, `%`))
 		}
 	}
-	if dbType == T_POSTGRESQL {
+	if d.dbType == T_POSTGRESQL {
 		for _, v := range cfg.KeywordsRe {
 			v = strings.TrimSpace(v)
 			if v == "" {

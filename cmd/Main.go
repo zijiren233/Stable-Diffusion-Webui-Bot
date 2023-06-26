@@ -29,34 +29,38 @@ func init() {
 
 func Main() {
 	flag.Parse()
-	db.Init()
+	d := db.New(parseflag.DSN)
 	err := gconfig.Load(gconfig.ConfigPath)
 	if err != nil {
 		panic(err)
 	}
-	go gconfig.Wathc()
-	api.Load(gconfig.API())
-	go func() {
-		w := gconfig.NewWatchConfig(context.Background())
-		go func() {
-			time.Sleep(5 * time.Second)
-			w.Close()
-		}()
-		c := w.Ch()
-		for range c {
-			api.Load(gconfig.API())
-		}
-	}()
+	// go gconfig.Wathc()
+	// api.Load(gconfig.API())
+	// go func() {
+	// 	w := gconfig.NewWatchConfig(context.Background())
+	// 	go func() {
+	// 		time.Sleep(5 * time.Second)
+	// 		w.Close()
+	// 	}()
+	// 	c := w.Ch()
+	// 	for range c {
+	// 		api.Load(gconfig.API())
+	// 	}
+	// }()
 	defer ants.Release()
 	c, err := cache.NewCache(cache.WithSavePath(parseflag.ImageSavePath), cache.WithCacheNum(parseflag.ImageCacheNum))
 	if err != nil {
 		panic(fmt.Errorf("new Cache Error: %v", err))
 	}
-	hConfigs := []handler.ConfigFunc{handler.WithCache(c)}
+	hConfigs := []handler.ConfigFunc{handler.WithCache(c), handler.WithImgMaxSize(parseflag.ImgMaxSize), handler.WithMaxNum(parseflag.MaxNum)}
 	if parseflag.WebhookHost != "" {
 		hConfigs = append(hConfigs, handler.WithWebhook(parseflag.WebhookHost))
 	}
-	h, err := handler.New(parseflag.TgToken, hConfigs...)
+	a, err := api.New(gconfig.API(), gconfig.MODELS())
+	if err != nil {
+		panic(err)
+	}
+	h, err := handler.New(parseflag.TgToken, a, d, hConfigs...)
 	if err != nil {
 		panic(err)
 	}

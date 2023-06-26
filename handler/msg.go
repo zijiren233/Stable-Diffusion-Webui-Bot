@@ -10,8 +10,6 @@ import (
 
 	"github.com/zijiren233/stable-diffusion-webui-bot/db"
 	parseflag "github.com/zijiren233/stable-diffusion-webui-bot/flag"
-	api "github.com/zijiren233/stable-diffusion-webui-bot/stable-diffusion-webui-api"
-	"github.com/zijiren233/stable-diffusion-webui-bot/user"
 	"github.com/zijiren233/stable-diffusion-webui-bot/utils"
 
 	tgbotapi "github.com/zijiren233/tg-bot-api/v6"
@@ -32,13 +30,15 @@ func (h *Handler) HandleMsg(Message *tgbotapi.Message) {
 
 func (h *Handler) getCfg(msg *tgbotapi.Message) (*Config, error) {
 	info := new(Config)
-	u, err := user.LoadAndInitUser(h.bot, msg.From.ID)
+	u, err := h.UserHandler.LoadAndInitUser(h.bot, msg.From.ID)
 	if err != nil {
 		colorlog.Errorf("Load And Init User Err: %v", err)
 		return nil, err
 	}
 	info.DrawConfig = *u.DefaultConfig()
+	arges := []ConfigFuncCorrentCfg{WithTag(), WithUc(), WithSeed()}
 	if len(msg.Photo) > 0 {
+		arges = append(arges, WithPhoto())
 		info.Tag = msg.Caption
 		latestPhoto := msg.Photo[len(msg.Photo)-1]
 		info.Width = latestPhoto.Width
@@ -58,6 +58,7 @@ func (h *Handler) getCfg(msg *tgbotapi.Message) (*Config, error) {
 			return nil, err
 		}
 	} else if msg.Document != nil {
+		arges = append(arges, WithPhoto())
 		if _, ok := utils.InString(msg.Document.MimeType, avilableDocumentType); !ok {
 			return nil, errors.New("document type is not avilable")
 		}
@@ -120,6 +121,7 @@ func (h *Handler) getCfg(msg *tgbotapi.Message) (*Config, error) {
 			}
 		}
 	}
+	h.CorrectCfg(info, u, arges...)
 	return info, nil
 }
 
@@ -136,14 +138,14 @@ func creatBar(p float64, maxCount int) string {
 	return fmt.Sprintf("[%s>%s]", strings.Repeat("=", int(s)), strings.Repeat(" ", maxCount-int(s)))
 }
 
-func (h *Handler) drawAndSend(u *user.UserInfo, replyMsgID int, cfg *Config, prePhoto, ControlPhoto []byte, CorrectCfg bool) {
+func (h *Handler) drawAndSend(u *UserInfo, replyMsgID int, cfg *Config, prePhoto, ControlPhoto []byte) {
 	if u == nil {
 		colorlog.Error("user is nil")
 		return
 	}
-	if u.Permissions() == user.T_Prohibit {
+	if u.Permissions() == T_Prohibit {
 		msg := tgbotapi.NewMessage(u.ChatMember.User.ID, u.ProhibitString(h.bot))
-		msg.ReplyMarkup = goJoinButton(u)
+		msg.ReplyMarkup = h.goJoinButton(u)
 		msg.ReplyToMessageID = replyMsgID
 		h.bot.Send(msg)
 		return
@@ -152,7 +154,7 @@ func (h *Handler) drawAndSend(u *user.UserInfo, replyMsgID int, cfg *Config, pre
 		colorlog.Error("cfg is nil")
 		return
 	}
-	nai, err := api.New(&cfg.DrawConfig, prePhoto, ControlPhoto, CorrectCfg)
+	nai, err := h.Api.New(&cfg.DrawConfig, prePhoto, ControlPhoto)
 	if err != nil {
 		colorlog.Errorf("New config err [%s] : %v", u.ChatMember.User.String(), err)
 		return
@@ -160,7 +162,7 @@ func (h *Handler) drawAndSend(u *user.UserInfo, replyMsgID int, cfg *Config, pre
 	colorlog.Debugf("Draw [%s] : %v", u.ChatMember.User.String(), cfg.DrawConfig)
 	ctx, cf := context.WithCancel(context.Background())
 	defer cf()
-	resoult := nai.Draw(ctx, u.Permissions() != user.T_Subscribe)
+	resoult := nai.Draw(ctx, u.Permissions() != T_Subscribe)
 	msg := tgbotapi.NewMessage(u.ChatMember.User.ID, fmt.Sprintf("%s\n%s", u.LoadLang("generating"), creatBar(nai.Status().Progress, 50)))
 	msg.ReplyMarkup = cancelButton(u)
 	msg.ReplyToMessageID = replyMsgID
@@ -189,7 +191,7 @@ func (h *Handler) drawAndSend(u *user.UserInfo, replyMsgID int, cfg *Config, pre
 				colorlog.Errorf("Draw Err [%s] : %v", u.ChatMember.User.String(), b.Err)
 				return
 			}
-			if u.Permissions() == user.T_Guest {
+			if u.Permissions() == T_Guest {
 				u.UseFree(1)
 			}
 			h.sendPhoto(b.Resoult, u, replyMsgID, cfg, true, ControlPhoto != nil)
@@ -198,7 +200,7 @@ func (h *Handler) drawAndSend(u *user.UserInfo, replyMsgID int, cfg *Config, pre
 	}
 }
 
-func (h *Handler) superResolutionRun(u *user.UserInfo, replyMsgID int, cfg *Config, prePhoto []byte, resize int) {
+func (h *Handler) superResolutionRun(u *UserInfo, replyMsgID int, cfg *Config, prePhoto []byte, resize int) {
 	if u == nil {
 		colorlog.Error("user is nil")
 		return
@@ -209,11 +211,11 @@ func (h *Handler) superResolutionRun(u *user.UserInfo, replyMsgID int, cfg *Conf
 	}
 	ctx, cf := context.WithCancel(context.Background())
 	defer cf()
-	spcfg, err := api.NewSuperResolution([][]byte{prePhoto}, resize)
+	spcfg, err := h.Api.NewSuperResolution([][]byte{prePhoto}, resize)
 	if err != nil {
 		return
 	}
-	resoult := spcfg.SuperResolution(ctx, u.Permissions() != user.T_Subscribe)
+	resoult := spcfg.SuperResolution(ctx, u.Permissions() != T_Subscribe)
 	colorlog.Debugf("superResolution [%s]", u.ChatMember.User.String())
 	msg := tgbotapi.NewMessage(u.ChatMember.User.ID, u.LoadLang("generating"))
 	msg.ReplyMarkup = cancelButton(u)
@@ -237,7 +239,7 @@ func (h *Handler) superResolutionRun(u *user.UserInfo, replyMsgID int, cfg *Conf
 			colorlog.Errorf("Draw Err [%s] : %v", u.ChatMember.User.String(), b.Err)
 			return
 		}
-		if u.Permissions() == user.T_Guest {
+		if u.Permissions() == T_Guest {
 			u.UseFree(1)
 		}
 		cfg.Width *= resize
@@ -246,7 +248,7 @@ func (h *Handler) superResolutionRun(u *user.UserInfo, replyMsgID int, cfg *Conf
 	}
 }
 
-func (h *Handler) sendPhoto(b [][]byte, u *user.UserInfo, replyMsgID int, cfg *Config, button, skipCtrlPhotoSaveToDB bool) {
+func (h *Handler) sendPhoto(b [][]byte, u *UserInfo, replyMsgID int, cfg *Config, button, skipCtrlPhotoSaveToDB bool) {
 	if b == nil || u == nil || cfg == nil {
 		return
 	}
@@ -256,10 +258,10 @@ func (h *Handler) sendPhoto(b [][]byte, u *user.UserInfo, replyMsgID int, cfg *C
 		if err != nil {
 			colorlog.Errorf("Put file err: %v", err)
 		} else if !(skipCtrlPhotoSaveToDB && k >= (l-1)) {
-			if u.Permissions() != user.T_Subscribe {
-				db.DB().Create(&db.PhotoInfo{FileID: fi.FileID, UnShare: false, UserID: u.ChatMember.User.ID, Config: cfg.DrawConfig, PrePhotoID: cfg.PrePhotoID, ControlPhotoID: cfg.ControlPhotoID})
+			if u.Permissions() != T_Subscribe {
+				h.DB.DB().Create(&db.PhotoInfo{FileID: fi.FileID, UnShare: false, UserID: u.ChatMember.User.ID, Config: cfg.DrawConfig, PrePhotoID: cfg.PrePhotoID, ControlPhotoID: cfg.ControlPhotoID})
 			} else {
-				db.DB().Create(&db.PhotoInfo{FileID: fi.FileID, UnShare: !u.UserInfo.SharePhoto, UserID: u.ChatMember.User.ID, Config: cfg.DrawConfig, PrePhotoID: cfg.PrePhotoID, ControlPhotoID: cfg.ControlPhotoID})
+				h.DB.DB().Create(&db.PhotoInfo{FileID: fi.FileID, UnShare: !u.UserInfo.SharePhoto, UserID: u.ChatMember.User.ID, Config: cfg.DrawConfig, PrePhotoID: cfg.PrePhotoID, ControlPhotoID: cfg.ControlPhotoID})
 			}
 		}
 		msg := tgbotapi.NewDocument(u.ChatMember.User.ID, tgbotapi.FileBytes{Name: fmt.Sprint(fi.FileID, ".png"), Bytes: v})

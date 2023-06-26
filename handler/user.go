@@ -1,4 +1,4 @@
-package user
+package handler
 
 import (
 	"bytes"
@@ -13,6 +13,7 @@ import (
 	"github.com/zijiren233/stable-diffusion-webui-bot/i18n"
 	api "github.com/zijiren233/stable-diffusion-webui-bot/stable-diffusion-webui-api"
 	"github.com/zijiren233/stable-diffusion-webui-bot/utils"
+	"gorm.io/gorm"
 
 	"github.com/zijiren233/go-colorlog"
 	parseflag "github.com/zijiren233/stable-diffusion-webui-bot/flag"
@@ -34,6 +35,19 @@ type UserInfo struct {
 	Subscribe  *db.Subscribe
 	ChatMember *tgbotapi.ChatMember
 	LastUpdate time.Time
+	handler    *Handler
+	db         *gorm.DB
+}
+
+type UserHandler struct {
+	userL     *kmutex.Kmutex
+	userCache *sync.Map
+	handler   *Handler
+	db        *gorm.DB
+}
+
+func NewUserHandler(handler *Handler, db *gorm.DB) *UserHandler {
+	return &UserHandler{handler: handler, db: db, userL: kmutex.New(), userCache: &sync.Map{}}
 }
 
 func (u *UserInfo) Permissions() permissions {
@@ -62,7 +76,7 @@ func (u *UserInfo) LoadExtraLang(tag string) string {
 
 func (u *UserInfo) SetLang(langType string) error {
 	u.UserInfo.Language = langType
-	return db.DB().Model(db.UserInfo{}).Where("user_id = ?", u.ChatMember.User.ID).Update("language", langType).Error
+	return u.db.Model(db.UserInfo{}).Where("user_id = ?", u.ChatMember.User.ID).Update("language", langType).Error
 }
 
 // func (u *userInfo) chatMemberRemove() {
@@ -81,44 +95,44 @@ func (u *UserInfo) UseFree(n int) {
 		u.Subscribe.FreeAmount = 0
 	}
 	u.Subscribe.UpdatedAt = time.Now()
-	db.DB().Model(db.Subscribe{}).Where(`user_id = ?`, u.Subscribe.UserID).Update("free_amount", u.Subscribe.FreeAmount)
+	u.db.Model(db.Subscribe{}).Where(`user_id = ?`, u.Subscribe.UserID).Update("free_amount", u.Subscribe.FreeAmount)
 }
 
-var userCache = &sync.Map{}
-
-var userL = kmutex.New()
-
-func LoadAndInitUser(bot *tgbotapi.BotAPI, userID int64) (u *UserInfo, err error) {
-	userL.Lock(userID)
-	defer userL.Unlock(userID)
-	i, ok := userCache.Load(userID)
+func (uh *UserHandler) LoadAndInitUser(bot *tgbotapi.BotAPI, userID int64) (u *UserInfo, err error) {
+	uh.userL.Lock(userID)
+	defer uh.userL.Unlock(userID)
+	i, ok := uh.userCache.Load(userID)
 	now := time.Now()
 	if !ok {
 		u = new(UserInfo)
+		u.handler = uh.handler
+		u.db = uh.db
 		cm, err := bot.GetChatMember(tgbotapi.GetChatMemberConfig{ChatConfigWithUser: tgbotapi.ChatConfigWithUser{ChatID: userID, UserID: userID}})
 		if err != nil {
 			return nil, err
 		}
 		u.ChatMember = &cm
 		u.UserInfo = &db.UserInfo{}
-		db.DB().Where("user_id = ?", userID).Attrs(db.UserInfo{UserID: userID, Language: "en_us", Passwd: utils.RandomString(10), SharePhoto: true}).FirstOrCreate(u.UserInfo)
+		uh.db.Where("user_id = ?", userID).Attrs(db.UserInfo{UserID: userID, Language: "en_us", Passwd: utils.RandomString(10), SharePhoto: true}).FirstOrCreate(u.UserInfo)
 		u.Subscribe = &db.Subscribe{}
-		db.DB().Where("user_id = ?", userID).Attrs(db.Subscribe{UserID: userID, FreeAmount: parseflag.MaxFree, Deadline: now}).FirstOrCreate(u.Subscribe)
-		userCache.Store(userID, u)
+		uh.db.Where("user_id = ?", userID).Attrs(db.Subscribe{UserID: userID, FreeAmount: parseflag.MaxFree, Deadline: now}).FirstOrCreate(u.Subscribe)
+		uh.userCache.Store(userID, u)
 	} else {
 		u = i.(*UserInfo)
 	}
 	return
 }
 
-func LoadUser(bot *tgbotapi.BotAPI, userID int64) (u *UserInfo, err error) {
-	userL.Lock(userID)
-	defer userL.Unlock(userID)
-	i, ok := userCache.Load(userID)
+func (uh *UserHandler) LoadUser(bot *tgbotapi.BotAPI, userID int64) (u *UserInfo, err error) {
+	uh.userL.Lock(userID)
+	defer uh.userL.Unlock(userID)
+	i, ok := uh.userCache.Load(userID)
 	now := time.Now()
 	if !ok {
 		u = new(UserInfo)
-		u.UserInfo, err = findUser(userID)
+		u.handler = uh.handler
+		u.db = uh.db
+		u.UserInfo, err = uh.findUser(userID)
 		if err != nil {
 			return nil, err
 		}
@@ -127,10 +141,10 @@ func LoadUser(bot *tgbotapi.BotAPI, userID int64) (u *UserInfo, err error) {
 			return nil, err
 		}
 		u.ChatMember = &cm
-		db.DB().Where("user_id = ?", userID).Attrs(db.UserInfo{UserID: userID, Language: "en_us", Passwd: utils.RandomString(10), SharePhoto: true}).FirstOrCreate(u.UserInfo)
+		uh.db.Where("user_id = ?", userID).Attrs(db.UserInfo{UserID: userID, Language: "en_us", Passwd: utils.RandomString(10), SharePhoto: true}).FirstOrCreate(u.UserInfo)
 		u.Subscribe = &db.Subscribe{}
-		db.DB().Where("user_id = ?", userID).Attrs(db.Subscribe{UserID: userID, FreeAmount: parseflag.MaxFree, Deadline: now}).FirstOrCreate(u.Subscribe)
-		userCache.Store(userID, u)
+		uh.db.Where("user_id = ?", userID).Attrs(db.Subscribe{UserID: userID, FreeAmount: parseflag.MaxFree, Deadline: now}).FirstOrCreate(u.Subscribe)
+		uh.userCache.Store(userID, u)
 	} else {
 		u = i.(*UserInfo)
 	}
@@ -145,13 +159,13 @@ var errUserNotFind = errors.New("user not found")
 // 	return findUser(userID)
 // }
 
-func findUser(userID int64) (*db.UserInfo, error) {
-	i, ok := userCache.Load(userID)
+func (uh *UserHandler) findUser(userID int64) (*db.UserInfo, error) {
+	i, ok := uh.userCache.Load(userID)
 	if !ok {
 		u := new(db.UserInfo)
-		db.DB().Where("user_id = ?", userID).Find(u)
+		uh.db.Where("user_id = ?", userID).Find(u)
 		if u.UserID != 0 {
-			userCache.Store(userID, u)
+			uh.userCache.Store(userID, u)
 			return u, nil
 		} else {
 			return u, errUserNotFind
@@ -170,59 +184,59 @@ func (u *UserInfo) ChangeShare(share bool) error {
 		return nil
 	}
 	u.UserInfo.SharePhoto = share
-	return db.DB().Model(db.UserInfo{}).Where("user_id = ?", u.ChatMember.User.ID).Update("share_photo", share).Error
+	return u.db.Model(db.UserInfo{}).Where("user_id = ?", u.ChatMember.User.ID).Update("share_photo", share).Error
 }
 
 func (u *UserInfo) ChangeDefaultUC(uc string) error {
 	if u.UserInfo.UserDefaultUC == uc {
 		return nil
 	}
-	uc = api.ReplaceString(uc)
+	uc = ReplaceString(uc)
 	if len(uc) > 2048 {
 		return errors.New("us is very long")
 	}
 	u.UserInfo.UserDefaultUC = uc
-	return db.DB().Model(db.UserInfo{}).Where("user_id = ?", u.ChatMember.User.ID).Update("user_default_uc", uc).Error
+	return u.db.Model(db.UserInfo{}).Where("user_id = ?", u.ChatMember.User.ID).Update("user_default_uc", uc).Error
 }
 
 func (u *UserInfo) ChangeDefaultMODE(mode string) error {
 	if u.UserInfo.UserDefaultMODE == mode {
 		return nil
 	}
-	m := api.AllMode()
+	m := u.handler.mode
 	if _, ok := utils.InString(mode, m[:]); !ok {
 		return errors.New("mode not support")
 	}
 	u.UserInfo.UserDefaultMODE = mode
-	return db.DB().Model(db.UserInfo{}).Where("user_id = ?", u.ChatMember.User.ID).Update("user_default_mode", mode).Error
+	return u.db.Model(db.UserInfo{}).Where("user_id = ?", u.ChatMember.User.ID).Update("user_default_mode", mode).Error
 }
 
 func (u *UserInfo) ChangeDefaultNumber(num int) error {
 	if u.UserInfo.UserDefaultNumber == num {
 		return nil
 	}
-	u.UserInfo.UserDefaultNumber = api.ParseNum(num)
-	return db.DB().Model(db.UserInfo{}).Where("user_id = ?", u.ChatMember.User.ID).Update("user_default_number", num).Error
+	u.UserInfo.UserDefaultNumber = u.handler.ParseNum(num)
+	return u.db.Model(db.UserInfo{}).Where("user_id = ?", u.ChatMember.User.ID).Update("user_default_number", num).Error
 }
 
 func (u *UserInfo) ChangeDefaultScale(scale int) error {
 	if u.UserInfo.UserDefaultScale == scale {
 		return nil
 	}
-	u.UserInfo.UserDefaultScale = api.ParseCfgScalse(scale)
-	return db.DB().Model(db.UserInfo{}).Where("user_id = ?", u.ChatMember.User.ID).Update("user_default_scale", u.UserInfo.UserDefaultScale).Error
+	u.UserInfo.UserDefaultScale = u.handler.ParseCfgScalse(scale)
+	return u.db.Model(db.UserInfo{}).Where("user_id = ?", u.ChatMember.User.ID).Update("user_default_scale", u.UserInfo.UserDefaultScale).Error
 }
 
 func (u *UserInfo) ChangeDefaultSteps(steps int) error {
 	if u.UserInfo.UserDefaultSteps == steps {
 		return nil
 	}
-	u.UserInfo.UserDefaultSteps = api.ParseSteps(steps)
-	return db.DB().Model(db.UserInfo{}).Where("user_id = ?", u.ChatMember.User.ID).Update("user_default_steps", u.UserInfo.UserDefaultSteps).Error
+	u.UserInfo.UserDefaultSteps = u.handler.ParseSteps(steps)
+	return u.db.Model(db.UserInfo{}).Where("user_id = ?", u.ChatMember.User.ID).Update("user_default_steps", u.UserInfo.UserDefaultSteps).Error
 }
 
 func (u *UserInfo) DefaultConfig() *api.DrawConfig {
-	cfg := api.DefaultConfig()
+	cfg := u.handler.DefaultConfig()
 	if u.UserInfo.UserDefaultMODE != "" {
 		cfg.Mode = u.UserInfo.UserDefaultMODE
 	}

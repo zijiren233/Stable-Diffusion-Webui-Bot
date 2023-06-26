@@ -4,13 +4,12 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/zijiren233/stable-diffusion-webui-bot/user"
 	tgbotapi "github.com/zijiren233/tg-bot-api/v6"
 
 	"github.com/gin-gonic/gin"
 )
 
-func auth(bot *tgbotapi.BotAPI) gin.HandlerFunc {
+func (r *Router) auth(bot *tgbotapi.BotAPI) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		userid, pwd, ok := ctx.Request.BasicAuth()
 		if !ok {
@@ -22,7 +21,7 @@ func auth(bot *tgbotapi.BotAPI) gin.HandlerFunc {
 			authErr(ctx)
 			return
 		}
-		ui, err := user.LoadUser(bot, id)
+		ui, err := r.handler.UserHandler.LoadUser(bot, id)
 		if err != nil || ui.Passwd() != pwd {
 			authErr(ctx)
 			return

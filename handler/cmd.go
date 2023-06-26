@@ -11,7 +11,6 @@ import (
 	"github.com/zijiren233/stable-diffusion-webui-bot/db"
 	parseflag "github.com/zijiren233/stable-diffusion-webui-bot/flag"
 	api "github.com/zijiren233/stable-diffusion-webui-bot/stable-diffusion-webui-api"
-	"github.com/zijiren233/stable-diffusion-webui-bot/user"
 	"github.com/zijiren233/stable-diffusion-webui-bot/utils"
 
 	tgbotapi "github.com/zijiren233/tg-bot-api/v6"
@@ -20,7 +19,7 @@ import (
 )
 
 func (h *Handler) HandleCmd(Message tgbotapi.Message) {
-	u, err := user.LoadAndInitUser(h.bot, Message.From.ID)
+	u, err := h.UserHandler.LoadAndInitUser(h.bot, Message.From.ID)
 	if err != nil {
 		colorlog.Errorf("Load And Init User Err: %v", err)
 		return
@@ -46,7 +45,7 @@ func (h *Handler) HandleCmd(Message tgbotapi.Message) {
 		h.start(Message, u)
 	case "help":
 		msg := tgbotapi.NewMessage(Message.Chat.ID, u.LoadLang("help"))
-		msg.ReplyMarkup = goGuideButton(u)
+		msg.ReplyMarkup = h.goGuideButton(u)
 		h.bot.Send(msg)
 	case "history":
 		h.history(Message, u)
@@ -73,7 +72,7 @@ func (h *Handler) HandleCmd(Message tgbotapi.Message) {
 	}
 }
 
-func (h *Handler) invite(Message tgbotapi.Message, u *user.UserInfo) {
+func (h *Handler) invite(Message tgbotapi.Message, u *UserInfo) {
 	rawUrl, err := url.Parse(fmt.Sprintf("https://t.me/%s", h.bot.Self.UserName))
 	if err != nil {
 		colorlog.Error(err)
@@ -88,7 +87,7 @@ func (h *Handler) invite(Message tgbotapi.Message, u *user.UserInfo) {
 	h.bot.Send(msg)
 }
 
-func (h *Handler) start(Message tgbotapi.Message, u *user.UserInfo) {
+func (h *Handler) start(Message tgbotapi.Message, u *UserInfo) {
 	args := strings.Split(Message.CommandArguments(), "-")
 	switch args[0] {
 	case "invite":
@@ -104,7 +103,7 @@ func (h *Handler) start(Message tgbotapi.Message, u *user.UserInfo) {
 	}
 }
 
-func (h *Handler) usefree(Message tgbotapi.Message, u *user.UserInfo) {
+func (h *Handler) usefree(Message tgbotapi.Message, u *UserInfo) {
 	if Message.From.ID != parseflag.OwnerID {
 		return
 	}
@@ -122,7 +121,7 @@ func (h *Handler) usefree(Message tgbotapi.Message, u *user.UserInfo) {
 	}
 	msg := tgbotapi.NewMessage(Message.Chat.ID, "")
 	msg.ReplyToMessageID = Message.MessageID
-	useUser, err := user.LoadUser(h.bot, userID)
+	useUser, err := h.UserHandler.LoadUser(h.bot, userID)
 	if err != nil {
 		msg.Text = err.Error()
 		h.bot.Send(msg)
@@ -137,7 +136,7 @@ var (
 	invitedList = []int64{}
 )
 
-func (h *Handler) handelInvite(Message tgbotapi.Message, u *user.UserInfo, args []string) {
+func (h *Handler) handelInvite(Message tgbotapi.Message, u *UserInfo, args []string) {
 	if parseflag.EnableInvite {
 		return
 	}
@@ -166,7 +165,7 @@ func (h *Handler) handelInvite(Message tgbotapi.Message, u *user.UserInfo, args 
 		h.bot.Send(msg)
 		return
 	}
-	iUser, err := user.LoadUser(h.bot, id)
+	iUser, err := h.UserHandler.LoadUser(h.bot, id)
 	if err != nil {
 		msg.Text = "Error"
 		h.bot.Send(msg)
@@ -179,7 +178,7 @@ func (h *Handler) handelInvite(Message tgbotapi.Message, u *user.UserInfo, args 
 	h.bot.Send(msg)
 }
 
-func (h *Handler) newSetDft(Message tgbotapi.Message, u *user.UserInfo) {
+func (h *Handler) newSetDft(Message tgbotapi.Message, u *UserInfo) {
 	msg := tgbotapi.NewMessage(Message.Chat.ID, u.LoadLang("setDft"))
 	msg.ReplyToMessageID = Message.MessageID
 	msg.ReplyMarkup = setDefaultCfg(u)
@@ -195,7 +194,7 @@ func (h *Handler) info(Message tgbotapi.Message) {
 		h.bot.Send(tgbotapi.NewMessage(Message.Chat.ID, fmt.Sprint(err)))
 		return
 	}
-	u, err := user.LoadUser(h.bot, uID)
+	u, err := h.UserHandler.LoadUser(h.bot, uID)
 	if err != nil {
 		colorlog.Errorf("Load User Err: %v", err)
 		return
@@ -205,11 +204,11 @@ func (h *Handler) info(Message tgbotapi.Message) {
 	h.bot.Send(msg)
 }
 
-func (h *Handler) subscribe(Message tgbotapi.Message, u *user.UserInfo) {
+func (h *Handler) subscribe(Message tgbotapi.Message, u *UserInfo) {
 	if u.Subscribe.Deadline.Before(time.Now()) {
 		msg := tgbotapi.NewMessage(Message.Chat.ID, u.LoadLang("noSubscribe"))
 		msg.ReplyToMessageID = Message.MessageID
-		msg.ReplyMarkup = goJoinButton(u)
+		msg.ReplyMarkup = h.goJoinButton(u)
 		h.bot.Send(msg)
 	} else {
 		msg := tgbotapi.NewMessage(Message.Chat.ID, fmt.Sprintf("Deadline: `%s`", u.Subscribe.Deadline.Format("2006-01-02 15:04:05")))
@@ -228,24 +227,24 @@ func (h *Handler) unsubscribe(Message tgbotapi.Message) {
 		h.bot.Send(tgbotapi.NewMessage(Message.Chat.ID, fmt.Sprint(err)))
 		return
 	}
-	ui, err := user.LoadUser(h.bot, uID)
+	ui, err := h.UserHandler.LoadUser(h.bot, uID)
 	if err != nil {
 		colorlog.Errorf("Load User Err: %v", err)
 		return
 	}
 	ui.Subscribe.Deadline = time.Now()
-	ret := db.DB().Model(&db.Subscribe{}).Omit("updated_at").Where("user_id = ?", uID).Update("deadline", time.Now())
+	ret := h.DB.DB().Model(&db.Subscribe{}).Omit("updated_at").Where("user_id = ?", uID).Update("deadline", time.Now())
 	if ret.RowsAffected == 0 {
 		colorlog.Error(Message.Chat.ID, "user not found")
 		h.bot.Send(tgbotapi.NewMessage(Message.Chat.ID, "user not found"))
 	}
 }
 
-func (h *Handler) share(Message tgbotapi.Message, u *user.UserInfo) {
-	if u.Permissions() != user.T_Subscribe {
+func (h *Handler) share(Message tgbotapi.Message, u *UserInfo) {
+	if u.Permissions() != T_Subscribe {
 		msg := tgbotapi.NewMessage(Message.Chat.ID, fmt.Sprintf("%s\n%s", u.LoadLang("shareInfo"), u.LoadLang("mustShare")))
 		msg.ReplyToMessageID = Message.MessageID
-		msg.ReplyMarkup = goJoinButton(u)
+		msg.ReplyMarkup = h.goJoinButton(u)
 		h.bot.Send(msg)
 		return
 	}
@@ -261,7 +260,7 @@ func (h *Handler) share(Message tgbotapi.Message, u *user.UserInfo) {
 	h.bot.Send(msg)
 }
 
-func (h *Handler) history(Message tgbotapi.Message, u *user.UserInfo) {
+func (h *Handler) history(Message tgbotapi.Message, u *UserInfo) {
 	msg := tgbotapi.NewMessage(Message.Chat.ID, fmt.Sprintf("%s\nUser ID: `%d`\nPassword: `%s`", u.LoadLang("history"), u.UserInfo.UserID, u.Passwd()))
 	msg.ReplyToMessageID = Message.MessageID
 	msg.ParseMode = "Markdown"
@@ -269,7 +268,7 @@ func (h *Handler) history(Message tgbotapi.Message, u *user.UserInfo) {
 	h.bot.Send(msg)
 }
 
-func (h *Handler) apis(Message tgbotapi.Message, u *user.UserInfo) {
+func (h *Handler) apis(Message tgbotapi.Message, u *UserInfo) {
 	msg := tgbotapi.NewMessage(Message.Chat.ID, fmt.Sprintf("API use Basic Auth\nUser ID: `%d`\nPassword: `%s`", u.UserInfo.UserID, u.Passwd()))
 	msg.ReplyToMessageID = Message.MessageID
 	msg.ParseMode = "Markdown"
@@ -277,7 +276,7 @@ func (h *Handler) apis(Message tgbotapi.Message, u *user.UserInfo) {
 	h.bot.Send(msg)
 }
 
-func (h *Handler) web(Message tgbotapi.Message, u *user.UserInfo) {
+func (h *Handler) web(Message tgbotapi.Message, u *UserInfo) {
 	msg := tgbotapi.NewMessage(Message.Chat.ID, fmt.Sprintf("You Can Use Website\nUser ID: `%d`\nPassword: `%s`", u.UserInfo.UserID, u.Passwd()))
 	msg.ReplyToMessageID = Message.MessageID
 	msg.ParseMode = "Markdown"
@@ -285,15 +284,15 @@ func (h *Handler) web(Message tgbotapi.Message, u *user.UserInfo) {
 	h.bot.Send(msg)
 }
 
-func (h *Handler) superresolution(Message tgbotapi.Message, u *user.UserInfo) {
-	if u.Permissions() == user.T_Prohibit {
+func (h *Handler) superresolution(Message tgbotapi.Message, u *UserInfo) {
+	if u.Permissions() == T_Prohibit {
 		msg := tgbotapi.NewMessage(u.ChatMember.User.ID, u.ProhibitString(h.bot))
-		msg.ReplyMarkup = goJoinButton(u)
+		msg.ReplyMarkup = h.goJoinButton(u)
 		msg.ReplyToMessageID = Message.MessageID
 		h.bot.Send(msg)
 		return
 	}
-	task, err := u.AddTask(user.T_SuperResolution)
+	task, err := u.AddTask(T_SuperResolution)
 	if err != nil {
 		return
 	}
@@ -418,13 +417,13 @@ func (h *Handler) dev(Message tgbotapi.Message) {
 	h.bot.Send(tgbotapi.NewMessage(Message.Chat.ID, fmt.Sprint(parseflag.Dev)))
 }
 
-func (h *Handler) token(Message tgbotapi.Message, u *user.UserInfo) {
+func (h *Handler) token(Message tgbotapi.Message, u *UserInfo) {
 	token := Message.CommandArguments()
 	if len(token) != 64 {
 		return
 	}
 	tk := db.Token{}
-	db.DB().Where("token = ?", token).Find(&tk)
+	h.DB.DB().Where("token = ?", token).Find(&tk)
 	if tk.ValidDate == 0 {
 		tokenErrMsg := tgbotapi.NewMessage(Message.Chat.ID, u.LoadLang("tokenErr"))
 		h.bot.Send(tokenErrMsg)
@@ -437,8 +436,8 @@ func (h *Handler) token(Message tgbotapi.Message, u *user.UserInfo) {
 	} else {
 		u.Subscribe.Deadline = u.Subscribe.Deadline.Add(add)
 	}
-	db.DB().Model(&db.Subscribe{}).Where("user_id = ?", Message.From.ID).Update("deadline", u.Subscribe.Deadline)
-	db.DB().Where("token = ?", tk.Token).Delete(&tk)
+	h.DB.DB().Model(&db.Subscribe{}).Where("user_id = ?", Message.From.ID).Update("deadline", u.Subscribe.Deadline)
+	h.DB.DB().Where("token = ?", tk.Token).Delete(&tk)
 	mc := tgbotapi.NewMessage(Message.Chat.ID, fmt.Sprintf("Success! Deadline: `%s`", u.Subscribe.Deadline.Format("2006-01-02 15:04:05")))
 	mc.ReplyToMessageID = Message.MessageID
 	mc.ParseMode = "Markdown"
@@ -454,7 +453,7 @@ func (h *Handler) getToken(Message tgbotapi.Message) {
 		return
 	}
 	token := utils.RandomString(64)
-	d := db.DB().Create(&db.Token{Token: token, ValidDate: u})
+	d := h.DB.DB().Create(&db.Token{Token: token, ValidDate: u})
 	var msg tgbotapi.MessageConfig
 	if d.Error != nil {
 		msg = tgbotapi.NewMessage(Message.From.ID, err.Error())
@@ -469,13 +468,13 @@ func (h *Handler) _pool(Message tgbotapi.Message) {
 	if Message.From.ID != parseflag.OwnerID {
 		return
 	}
-	msg := tgbotapi.NewMessage(Message.Chat.ID, fmt.Sprintf("```\npool: %d\nfree: %d\nwait: %d\ntime: %v\n```", api.DrawPoolCap(), api.DrawFree(), api.DrawWait(), time.Now().Format("01-02 15:04:05")))
+	msg := tgbotapi.NewMessage(Message.Chat.ID, fmt.Sprintf("```\npool: %d\nfree: %d\nwait: %d\ntime: %v\n```", h.Api.DrawPoolCap(), h.Api.DrawFree(), h.Api.DrawWait(), time.Now().Format("01-02 15:04:05")))
 	msg.ReplyMarkup = poolButton
 	msg.ParseMode = "Markdown"
 	h.bot.Send(msg)
 }
 
-func (h *Handler) img2tag(Message tgbotapi.Message, u *user.UserInfo) {
+func (h *Handler) img2tag(Message tgbotapi.Message, u *UserInfo) {
 	m, err := h.bot.NewMsgCbk(Message.Chat.ID, Message.From.ID)
 	if err != nil {
 		return
@@ -534,8 +533,8 @@ func (h *Handler) img2tag(Message tgbotapi.Message, u *user.UserInfo) {
 	}
 }
 
-func (h *Handler) guessTag(Message tgbotapi.Message, u *user.UserInfo) {
-	task, err := u.AddTask(user.T_GuessTag)
+func (h *Handler) guessTag(Message tgbotapi.Message, u *UserInfo) {
+	task, err := u.AddTask(T_GuessTag)
 	if err != nil {
 		return
 	}
@@ -605,7 +604,7 @@ func (h *Handler) guessTag(Message tgbotapi.Message, u *user.UserInfo) {
 			h.bot.Send(tgbotapi.NewDeleteMessage(Message.Chat.ID, m2.MessageID))
 			return
 		}
-		ic, err := api.NewInterrogate(photo)
+		ic, err := h.Api.NewInterrogate(photo)
 		if err != nil {
 			colorlog.Errorf("Guess Tag err: %v", err)
 			h.bot.Send(tgbotapi.NewEditMessageText(Message.Chat.ID, m2.MessageID, "Something Error"))
@@ -623,7 +622,7 @@ func (h *Handler) guessTag(Message tgbotapi.Message, u *user.UserInfo) {
 			return
 		}
 		cfg.Tag = ret.Resoult
-		cfg.CorrectCfg(true, false, false, false, false, false, false)
+		// cfg.CorrectCfg(true, false, false, false, false, false, false)
 		ms := tgbotapi.NewEditMessageText(Message.Chat.ID, m2.MessageID, string((&Config{DrawConfig: *cfg}).Fomate2TgHTML()))
 		ms.ParseMode = "HTML"
 		ms.ReplyMarkup = reDrawButton(u)

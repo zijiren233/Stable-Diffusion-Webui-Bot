@@ -19,22 +19,22 @@ import (
 	"github.com/zijiren233/go-colorlog"
 )
 
-var loadBalance = &api{
-	apiList: &[]*apiUrl{},
-	lock:    &sync.RWMutex{},
-}
+// var loadBalance = &api{
+// 	apiList: &[]*apiUrl{},
+// 	lock:    &sync.RWMutex{},
+// }
 
-func GetWoker() (m *sync.Map, c chan *apiUrl, a []*apiUrl) {
-	loadBalance.lock.RLock()
-	defer loadBalance.lock.RUnlock()
-	if loadBalance.working != nil {
-		m = *loadBalance.working
+func (api *API) GetWoker() (m *sync.Map, c chan *apiUrl, a []*apiUrl) {
+	api.loadBalance.lock.RLock()
+	defer api.loadBalance.lock.RUnlock()
+	if api.loadBalance.working != nil {
+		m = *api.loadBalance.working
 	}
-	if loadBalance.apiPool != nil {
-		c = *loadBalance.apiPool
+	if api.loadBalance.apiPool != nil {
+		c = *api.loadBalance.apiPool
 	}
-	if loadBalance.apiList != nil {
-		a = *loadBalance.apiList
+	if api.loadBalance.apiList != nil {
+		a = *api.loadBalance.apiList
 	}
 	return
 }
@@ -48,11 +48,11 @@ type api struct {
 
 var backendOnce = &sync.Once{}
 
-func Load(apis []gconfig.Api) {
-	loadAPI(apis)
+func (api *API) Load(apis []gconfig.Api) {
+	api.loadAPI(apis)
 	backendOnce.Do(func() {
-		go back()
-		go failover()
+		go api.back()
+		go api.failover()
 	})
 }
 
@@ -61,15 +61,20 @@ type apiUrl struct {
 	Models       []Model
 	CurrentModel string
 	LoadedModels *sync.Map
+	a            *API
 }
 
 func (api *apiUrl) ChangeOption(model string) error {
 	option := map[string]interface{}{"add_version_to_infotext": false, "lora_add_hashes_to_infotext": false, "add_model_hash_to_info": false, "add_model_name_to_info": true, "deepbooru_use_spaces": true, "interrogate_clip_dict_limit": 0, "interrogate_return_ranks": true, "deepbooru_sort_alpha": false, "interrogate_deepbooru_score_threshold": 0.5, "interrogate_clip_min_length": 15, "interrogate_clip_max_length": 50, "live_previews_enable": false, "sd_vae_as_default": false, "sd_checkpoint_cache": 0, "sd_vae_checkpoint_cache": 0, "grid_save": false, "eta_noise_seed_delta": 31337, "eta_ancestral": 1, "samples_save": false, "enable_emphasis": true}
 	if model != "" {
-		m := gconfig.Name2Model(model)
-		option["sd_model_checkpoint"] = m.File
-		option["sd_vae"] = m.Vae + m.VaeExt
-		option["CLIP_stop_at_last_layers"] = m.ClipSkip
+		i, ok := utils.In[gconfig.Model](api.a.models, func(m gconfig.Model) bool {
+			return m.Name == model
+		})
+		if ok {
+			option["sd_model_checkpoint"] = api.a.models[i].File
+			option["sd_vae"] = api.a.models[i].Vae + api.a.models[i].VaeExt
+			option["CLIP_stop_at_last_layers"] = api.a.models[i].ClipSkip
+		}
 	}
 	b, err := json.Marshal(option)
 	if err != nil {
@@ -99,11 +104,9 @@ func (api *apiUrl) ChangeOption(model string) error {
 	return fmt.Errorf("change option err: %s", string(body))
 }
 
-var getApiL = sync.Mutex{}
-
-func next(tryModel string) (*apiUrl, func()) {
-	getApiL.Lock()
-	defer getApiL.Unlock()
+func (a *API) next(tryModel string) (*apiUrl, func()) {
+	a.getApiL.Lock()
+	defer a.getApiL.Unlock()
 	var (
 		working           *sync.Map
 		apiChan           chan *apiUrl
@@ -114,7 +117,7 @@ func next(tryModel string) (*apiUrl, func()) {
 		count             = 0
 	)
 	for {
-		working, apiChan, _ = GetWoker()
+		working, apiChan, _ = a.GetWoker()
 		if len(apiChan) == 0 {
 			continue
 		}
@@ -166,24 +169,24 @@ func (api *apiUrl) GenerateApi(types string) string {
 	return fmt.Sprint(api.Url, "/sdapi/v1/", types)
 }
 
-func loadAPI(apis []gconfig.Api) {
-	loadBalance.lock.Lock()
-	defer loadBalance.lock.Unlock()
+func (a *API) loadAPI(apis []gconfig.Api) {
+	a.loadBalance.lock.Lock()
+	defer a.loadBalance.lock.Unlock()
 	working := &sync.Map{}
 	apiPool := make(chan *apiUrl, len(apis))
 	api := []*apiUrl{}
 	for _, v := range apis {
 		working.Store(v, false)
-		apiU := apiUrl{Api: v, LoadedModels: &sync.Map{}}
+		apiU := apiUrl{Api: v, LoadedModels: &sync.Map{}, a: a}
 		apiPool <- &apiU
 		api = append(api, &apiU)
 	}
-	if SliceEqualBCE(api, *loadBalance.apiList) {
+	if SliceEqualBCE(api, *a.loadBalance.apiList) {
 		return
 	}
-	loadBalance.apiList = &api
-	loadBalance.apiPool = &apiPool
-	loadBalance.working = &working
+	a.loadBalance.apiList = &api
+	a.loadBalance.apiPool = &apiPool
+	a.loadBalance.working = &working
 }
 
 func SliceEqualBCE(a, b []*apiUrl) bool {
@@ -211,14 +214,13 @@ type Model struct {
 	ModelName string `json:"model_name"`
 }
 
-func failover() {
+func (a *API) failover() {
 	timer := time.NewTicker(time.Second)
 	defer timer.Stop()
 	wait := &sync.WaitGroup{}
 	var workers uint32
 	for range timer.C {
-		working, _, apiList := GetWoker()
-		allowModels := gconfig.MODELS()
+		working, _, apiList := a.GetWoker()
 		for _, v := range apiList {
 			wait.Add(1)
 			go func(api *apiUrl) {
@@ -243,7 +245,7 @@ func failover() {
 					if json.Unmarshal(b, &api.Models) != nil {
 						return false, errReturn
 					}
-					if !ModelAllowed(api.Models, allowModels) {
+					if !ModelAllowed(api.Models, a.models) {
 						return false, errModels
 					}
 					return false, nil
@@ -257,9 +259,9 @@ func failover() {
 					})
 				} else {
 					if v, ok := working.Load(api); ok && !v.(bool) {
-						api.CurrentModel = allowModels[0].Name
+						api.CurrentModel = a.models[0].Name
 					}
-					api.LoadedModels.Store(allowModels[0].Name, nil)
+					api.LoadedModels.Store(a.models[0].Name, nil)
 					working.Store(api.Url, true)
 					atomic.AddUint32(&workers, 1)
 				}
@@ -269,7 +271,7 @@ func failover() {
 		if workers == 0 {
 			workers = 1
 		}
-		drawPool.Tune(int(workers))
+		a.drawPool.Tune(int(workers))
 		workers = 0
 		timer.Reset(time.Second * 10)
 	}

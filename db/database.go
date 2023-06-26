@@ -6,17 +6,16 @@ import (
 	"strings"
 	"time"
 
-	parseflag "github.com/zijiren233/stable-diffusion-webui-bot/flag"
-
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
-var db *gorm.DB
-
-var dbType dbTYPE
+type DB struct {
+	db     *gorm.DB
+	dbType dbTYPE
+}
 
 type dbTYPE int
 
@@ -25,29 +24,30 @@ const (
 	T_POSTGRESQL
 )
 
-func DB() *gorm.DB {
-	return db
+func (db *DB) DB() *gorm.DB {
+	return db.db
 }
 
-func DBType() dbTYPE {
-	return dbType
+func (db *DB) DBType() dbTYPE {
+	return db.dbType
 }
 
-func Init() {
+func New(dsn string) *DB {
+	tmpDB := &DB{}
 	var dialector gorm.Dialector
-	if regexp.MustCompile(`^postgres(ql)?://`).MatchString(parseflag.DSN) ||
-		len(strings.Fields(parseflag.DSN)) >= 3 {
+	if regexp.MustCompile(`^postgres(ql)?://`).MatchString(dsn) ||
+		len(strings.Fields(dsn)) >= 3 {
 		dialector = postgres.New(postgres.Config{
-			DSN:                  parseflag.DSN,
+			DSN:                  dsn,
 			PreferSimpleProtocol: false,
 		})
-		dbType = T_POSTGRESQL
+		tmpDB.dbType = T_POSTGRESQL
 	} else {
-		dialector = sqlite.Open(parseflag.DSN)
-		dbType = T_SQLITE
+		dialector = sqlite.Open(dsn)
+		tmpDB.dbType = T_SQLITE
 	}
 	var err error
-	db, err = gorm.Open(dialector, &gorm.Config{
+	tmpDB.db, err = gorm.Open(dialector, &gorm.Config{
 		PrepareStmt: true,
 		Logger:      logger.Default.LogMode(logger.Error)},
 	)
@@ -55,7 +55,7 @@ func Init() {
 		fmt.Println(err)
 		panic(err)
 	}
-	d, err := db.DB()
+	d, err := tmpDB.db.DB()
 	if err != nil {
 		fmt.Println(err)
 		panic(err)
@@ -63,9 +63,10 @@ func Init() {
 	d.SetMaxIdleConns(8)
 	d.SetMaxOpenConns(32)
 	d.SetConnMaxLifetime(time.Hour)
-	err = db.AutoMigrate(&Subscribe{}, &UserInfo{}, &PhotoInfo{}, &Token{})
+	err = tmpDB.db.AutoMigrate(&Subscribe{}, &UserInfo{}, &PhotoInfo{}, &Token{})
 	if err != nil {
 		fmt.Println(err)
 		panic(err)
 	}
+	return tmpDB
 }

@@ -36,16 +36,16 @@ type Any2Img struct {
 func (r *Router) apis() {
 	api := r.eng.Group("/api")
 	api.Use(logFormat)
-	auth := auth(r.handler.Bot())
+	auth := r.auth(r.handler.Bot())
 	{
-		api.GET("/i18n/:code", i18nYaml)
-		api.GET("/i18n-json/:code", i18nJson)
+		api.GET("/i18n/:code", r.i18nYaml)
+		api.GET("/i18n-json/:code", r.i18nJson)
 	}
 
 	{
-		api.GET("/modes", allModels)
+		api.GET("/modes", r.allModels)
 		api.GET("/models", models)
-		api.GET("/extra-model-groups", extraModelGroups)
+		api.GET("/extra-model-groups", r.extraModelGroups)
 		api.GET("/extra-model-groups/:group", extraModelWithGroups)
 		api.GET("/extra-models", extraModel)
 		api.GET("/control-preprocess", controlPreprocess)
@@ -53,15 +53,15 @@ func (r *Router) apis() {
 	}
 
 	{
-		api.GET("/search-images", searchImages)
+		api.GET("/search-images", r.searchImages)
 		api.GET("/images/:filename", r.Images)
 		rg := api.Group("/search-user-images")
 		rg.Use(auth)
-		rg.GET("", searchUserImages)
+		rg.GET("", r.searchUserImages)
 	}
 
 	{
-		api.POST("/test-draw-config", testDrawConfig)
+		api.POST("/test-draw-config", r.testDrawConfig)
 		draw := api.Group("/draw").Use(auth)
 		draw.POST("", r.drawPost)
 		draw.GET("", r.drawGet)

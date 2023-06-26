@@ -1,7 +1,6 @@
 package gconfig
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -10,7 +9,6 @@ import (
 	"sync"
 
 	"github.com/zijiren233/go-colorlog"
-	"github.com/zijiren233/stable-diffusion-webui-bot/utils"
 
 	"gopkg.in/yaml.v3"
 )
@@ -20,8 +18,6 @@ var lock sync.RWMutex
 const ConfigPath = "./config.yaml"
 
 var config Config
-
-var extraModelAllGroup []string
 
 // group -> []Lora
 var extraModel = make(map[string][]ExtraModel)
@@ -108,21 +104,6 @@ func Load(configPath string) error {
 		tmp.Api[i].Url = strings.TrimRight(tmp.Api[i].Url, "/")
 	}
 	config = *tmp
-	extraModelAllGroup = []string{}
-	extraModel = make(map[string][]ExtraModel)
-	sort.Sort(SortExtraModel(config.ExtraModel))
-	for _, v := range config.ExtraModel {
-		if v.Type == "" {
-			v.Type = "lora"
-		}
-		for _, g := range v.Group {
-			extraModel[g] = append(extraModel[g], v)
-			if _, ok := utils.InString(g, extraModelAllGroup); !ok {
-				extraModelAllGroup = append(extraModelAllGroup, g)
-			}
-		}
-	}
-	sort.Strings(extraModelAllGroup)
 	sort.Sort(SortEmbedding(config.Embedding))
 	if len(config.Api) == 0 {
 		colorlog.Warning("API list is empty")
@@ -169,12 +150,6 @@ func ExtraModelWithGroup(group string) []ExtraModel {
 	return extraModel[group]
 }
 
-func ExtraModelGroup() []string {
-	lock.RLock()
-	defer lock.RUnlock()
-	return extraModelAllGroup
-}
-
 func Process() []ControlProcess {
 	lock.RLock()
 	defer lock.RUnlock()
@@ -187,15 +162,15 @@ func PreProcess() []ControlPreProcess {
 	return config.ControlPreProcess
 }
 
-func Name2Process(name string) ControlProcess {
-	p := Process()
-	for _, v := range p {
-		if v.Name == name {
-			return v
-		}
-	}
-	return p[0]
-}
+// func Name2Process(name string) ControlProcess {
+// 	p := Process()
+// 	for _, v := range p {
+// 		if v.Name == name {
+// 			return v
+// 		}
+// 	}
+// 	return p[0]
+// }
 
 func MODELS() []Model {
 	lock.RLock()
@@ -203,52 +178,16 @@ func MODELS() []Model {
 	return config.Model
 }
 
-func MODELFILETONAME(file string) string {
-	if file == "" {
-		return ""
-	}
-	lock.RLock()
-	defer lock.RUnlock()
-	for _, m := range config.Model {
-		if m.File == file {
-			return m.Name
-		}
-	}
-	return config.Model[0].Name
-}
-
-func GroupIndex2ExtraModels(groupIndex int) []ExtraModel {
-	s := ExtraModelGroup()
-	if groupIndex < 0 {
-		return ExtraModelWithGroup(s[0])
-	} else if groupIndex+1 > len(s) {
-		return ExtraModelWithGroup(s[len(s)-1])
-	} else {
-		return ExtraModelWithGroup(s[groupIndex])
-	}
-}
-
-func GroupIndex2GroupName(groupIndex int) string {
-	s := ExtraModelGroup()
-	if groupIndex < 0 {
-		return s[0]
-	} else if groupIndex+1 > len(s) {
-		return s[len(s)-1]
-	} else {
-		return s[groupIndex]
-	}
-}
-
-func Index2ExtraModel(GroupIndex, LoraIndex int) ExtraModel {
-	s := GroupIndex2ExtraModels(GroupIndex)
-	if LoraIndex < 0 {
-		return s[0]
-	} else if LoraIndex+1 > len(s) {
-		return s[len(s)-1]
-	} else {
-		return s[LoraIndex]
-	}
-}
+// func GroupIndex2GroupName(groupIndex int) string {
+// 	s := ExtraModelGroup()
+// 	if groupIndex < 0 {
+// 		return s[0]
+// 	} else if groupIndex+1 > len(s) {
+// 		return s[len(s)-1]
+// 	} else {
+// 		return s[groupIndex]
+// 	}
+// }
 
 func EMBEDDING() []Embedding {
 	lock.RLock()
@@ -256,35 +195,25 @@ func EMBEDDING() []Embedding {
 	return config.Embedding
 }
 
-func Name2Model(name string) Model {
-	models := MODELS()
-	for _, v := range models {
-		if v.Name == name {
-			return v
-		}
-	}
-	return models[0]
-}
+// func GetExtraModelWithGroup(group, name string) (ExtraModel, error) {
+// 	loras := ExtraModelWithGroup(group)
+// 	for _, v := range loras {
+// 		if v.Name == name {
+// 			return v, nil
+// 		}
+// 	}
+// 	return ExtraModel{}, errors.New("not find lora")
+// }
 
-func GetExtraModelWithGroup(group, name string) (ExtraModel, error) {
-	loras := ExtraModelWithGroup(group)
-	for _, v := range loras {
-		if v.Name == name {
-			return v, nil
-		}
-	}
-	return ExtraModel{}, errors.New("not find lora")
-}
-
-func GetExtraModel(name string) (ExtraModel, error) {
-	extraModels := ALLExtraModel()
-	for _, v := range extraModels {
-		if v.Name == name {
-			return v, nil
-		}
-	}
-	return ExtraModel{}, errors.New("not find lora")
-}
+// func GetExtraModel(name string) (ExtraModel, error) {
+// 	extraModels := ALLExtraModel()
+// 	for _, v := range extraModels {
+// 		if v.Name == name {
+// 			return v, nil
+// 		}
+// 	}
+// 	return ExtraModel{}, errors.New("not find lora")
+// }
 
 func ALLMODELS() []Model {
 	lock.RLock()
