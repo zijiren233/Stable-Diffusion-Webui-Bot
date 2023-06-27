@@ -122,7 +122,7 @@ func WithCache(cache cache.Cache) ConfigFunc {
 	return func(h *Handler) { h.cache = cache }
 }
 
-var allMode = [...]string{"DPM++ 2M Karras", "DPM++ 2M SDE Karras", "DPM++ SDE Karras", "Euler a", "DPM2", "DPM adaptive", "DPM2 a Karras", "DPM2 Karras", "DPM++ 2M", "DPM++ 2S a", "DPM++ 2S a Karras", "DPM++ SDE", "LMS Karras", "Euler", "DDIM", "Heun", "UniPC"}
+var AllMode = [...]string{"DPM++ 2M Karras", "DPM++ 2M SDE Karras", "DPM++ SDE Karras", "Euler a", "DPM2", "DPM adaptive", "DPM2 a Karras", "DPM2 Karras", "DPM++ 2M", "DPM++ 2S a", "DPM++ 2S a Karras", "DPM++ SDE", "LMS Karras", "Euler", "DDIM", "Heun", "UniPC"}
 
 func New(tgToken string, api *api.API, db *db.DB, configs ...ConfigFunc) (*Handler, error) {
 	if api == nil {
@@ -131,7 +131,7 @@ func New(tgToken string, api *api.API, db *db.DB, configs ...ConfigFunc) (*Handl
 	if db == nil {
 		return nil, errors.New("db is nil")
 	}
-	h := &Handler{tgToken: tgToken, Api: api, DB: db, mode: allMode[:], MaxHFSteps: MaxHFSteps, MaxNum: MaxNum, DefaultCfgScale: DefaultCfgScale, DefaultSteps: DefaultSteps, DefaultNum: DefaultNum}
+	h := &Handler{tgToken: tgToken, Api: api, DB: db, mode: AllMode[:], MaxHFSteps: MaxHFSteps, MaxNum: MaxNum, DefaultCfgScale: DefaultCfgScale, DefaultSteps: DefaultSteps, DefaultNum: DefaultNum}
 	for _, cf := range configs {
 		cf(h)
 	}

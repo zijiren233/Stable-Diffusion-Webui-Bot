@@ -52,7 +52,17 @@ func Main() {
 	if err != nil {
 		panic(fmt.Errorf("new Cache Error: %v", err))
 	}
-	hConfigs := []handler.ConfigFunc{handler.WithCache(c), handler.WithImgMaxSize(parseflag.ImgMaxSize), handler.WithMaxNum(parseflag.MaxNum)}
+	hConfigs := []handler.ConfigFunc{handler.WithCache(c),
+		handler.WithImgMaxSize(parseflag.ImgMaxSize),
+		handler.WithMaxNum(parseflag.MaxNum),
+		handler.WithDefaultNum(1),
+		handler.WithModels(gconfig.MODELS()),
+		handler.WithModes(handler.AllMode[:]),
+		handler.WithDefaultCfgScale(8),
+		handler.WithDefaultSteps(25),
+		handler.WithOwnerID(parseflag.OwnerID),
+		handler.WithExtraModel(gconfig.ALLExtraModel()),
+	}
 	if parseflag.WebhookHost != "" {
 		hConfigs = append(hConfigs, handler.WithWebhook(parseflag.WebhookHost))
 	}
@@ -74,8 +84,8 @@ func Main() {
 		panic(err)
 	}
 	go r.Eng().Run(fmt.Sprintf("%s:%d", parseflag.Listen, parseflag.Port))
-	go h.Run(context.Background())
 	h.SetCommand()
+	go h.Run(context.Background())
 	colorlog.Infof("Service started successfully!\n%s://%s:%d", parseflag.ApiScheme, parseflag.Listen, parseflag.Port)
 	select {}
 }
