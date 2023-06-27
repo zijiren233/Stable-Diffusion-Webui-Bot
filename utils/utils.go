@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"net/http"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"time"
@@ -17,6 +18,23 @@ import (
 	"github.com/zijiren233/go-colorlog"
 	translater "github.com/zijiren233/google-translater"
 )
+
+var re = regexp.MustCompile(`[<>&]`)
+
+func Parse2HTML(str string) string {
+	return re.ReplaceAllStringFunc(str, func(s string) string {
+		switch s {
+		case "<":
+			return "&lt;"
+		case ">":
+			return "&gt;"
+		case "&":
+			return "&amp;"
+		default:
+			return s
+		}
+	})
+}
 
 func Translate(text string) string {
 	translated, err := translater.Translate(

@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/zijiren233/stable-diffusion-webui-bot/db"
 	"github.com/zijiren233/stable-diffusion-webui-bot/utils"
 
 	"github.com/panjf2000/ants/v2"
@@ -381,7 +382,7 @@ func init() {
 	os.RemoveAll(path.Join(os.TempDir(), "exif-tmp"))
 }
 
-func GetImgCfg(photo []byte) (*DrawConfig, error) {
+func GetImgCfg(photo []byte) (*db.Config, error) {
 	if len(photo) == 0 {
 		return nil, errors.New("photo len is nil")
 	}
@@ -467,6 +468,6 @@ func GetImgCfg(photo []byte) (*DrawConfig, error) {
 		}
 	}
 	exif.Width, exif.Height, _ = utils.GetPhotoSize(photo)
-	cfg := &DrawConfig{Seed: exif.Seed, Steps: exif.Steps, Model: exif.Model, CfgScale: int(exif.Scale), Num: 0, Tag: exif.Tag, Mode: exif.Sampler, Width: exif.Width, Height: exif.Height, Uc: exif.Uc}
+	cfg := &db.Config{Seed: exif.Seed, Steps: exif.Steps, Model: exif.Model, CfgScale: int(exif.Scale), Num: 0, Tag: exif.Tag, Mode: exif.Sampler, Width: exif.Width, Height: exif.Height, Uc: exif.Uc}
 	return cfg, nil
 }

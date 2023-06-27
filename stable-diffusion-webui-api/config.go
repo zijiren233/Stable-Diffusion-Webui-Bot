@@ -10,6 +10,7 @@ import (
 
 	"github.com/panjf2000/ants/v2"
 	"github.com/zijiren233/go-colorlog"
+	"github.com/zijiren233/stable-diffusion-webui-bot/db"
 	"github.com/zijiren233/stable-diffusion-webui-bot/gconfig"
 	"github.com/zijiren233/stable-diffusion-webui-bot/utils"
 )
@@ -26,7 +27,7 @@ type config struct {
 	ctx         context.Context
 	resoultChan chan<- *Resoult
 	cfg         *drawConfig
-	rawCfg      DrawConfig
+	rawCfg      db.Config
 	api         struct {
 		api    *apiUrl
 		status Status
@@ -74,22 +75,6 @@ type interrogateCfg struct {
 	Image       string `json:"image"`
 	Model       string `json:"model"`
 	a           *API
-}
-
-type DrawConfig struct {
-	Tag               string  `json:"tag,omitempty" yaml:"tag,omitempty"`
-	Mode              string  `json:"mode,omitempty" yaml:"mode,omitempty"`
-	Num               int     `json:"num,omitempty" yaml:"num,omitempty"`
-	Steps             int     `json:"steps,omitempty" yaml:"steps,omitempty"`
-	Seed              uint32  `json:"seed,omitempty" yaml:"seed,omitempty"`
-	CfgScale          int     `json:"scale,omitempty" yaml:"scale,omitempty"`
-	Width             int     `json:"width" yaml:"width"`
-	Height            int     `json:"height" yaml:"height"`
-	Model             string  `json:"model,omitempty" yaml:"model,omitempty"`
-	Uc                string  `json:"uc,omitempty" yaml:"uc,omitempty"`
-	Strength          float64 `json:"strength,omitempty" yaml:"strength,omitempty"`
-	ControlPreprocess string  `json:"control_preprocess,omitempty" yaml:"control_preprocess,omitempty"`
-	ControlProcess    string  `json:"control_process,omitempty" yaml:"control_process,omitempty"`
 }
 
 type drawConfig struct {
@@ -160,18 +145,7 @@ func New(apis []gconfig.Api, models []gconfig.Model) (*API, error) {
 	return a, nil
 }
 
-var Ucmap = map[string]string{
-	"low quality": "cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry",
-	"bad anatomy": "bad anatomy, bad hands, error, missing fingers, extra digit, fewer digits",
-}
-
-var defaultUC = fmt.Sprint("lowres, text, ", Ucmap["bad anatomy"], ", ", Ucmap["low quality"])
-
-func DefauleUC() string {
-	return defaultUC
-}
-
-func (api *API) New(cfg *DrawConfig, initPhoto, ControlPhoto []byte) (*config, error) {
+func (api *API) New(cfg *db.Config, initPhoto, ControlPhoto []byte) (*config, error) {
 	if cfg.Tag == "" {
 		return nil, errors.New("tag can not be empty")
 	}
@@ -337,6 +311,6 @@ func (api *API) NewInterrogate(photo []byte) (*interrogateCfg, error) {
 	return cfg, nil
 }
 
-func (cfg *config) GetCfg() DrawConfig {
+func (cfg *config) GetCfg() db.Config {
 	return cfg.rawCfg
 }

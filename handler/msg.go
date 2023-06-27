@@ -20,25 +20,41 @@ import (
 
 var avilableDocumentType = []string{"image/jpeg", "image/png"}
 
+func (h *Handler) sendNewConfig(u *UserInfo, cfg *db.Config, replyMsgId int) (err error) {
+	if cfg == nil {
+		return errors.New("cfg is nil")
+	}
+	panel := panelButton(u, cfg.PrePhotoID != "", cfg.ControlPhotoID != "")
+	h.CorrectCfg(cfg, u, WithTag(), WithUc(), WithSeed())
+	mc := tgbotapi.NewMessage(u.ChatMember.User.ID, string(cfg.Fomate2TgHTML()))
+	mc.ReplyMarkup = panel
+	mc.ReplyToMessageID = replyMsgId
+	mc.ParseMode = "HTML"
+	mc.DisableWebPagePreview = false
+	_, err = h.bot.Send(mc)
+	return err
+}
+
 func (h *Handler) HandleMsg(Message *tgbotapi.Message) {
-	_, err := h.getCfg(Message)
+	u, err := h.UserHandler.LoadAndInitUser(h.bot, Message.From.ID)
+	if err != nil {
+		colorlog.Errorf("Load And Init User Err: %v", err)
+		return
+	}
+	info := u.DefaultConfig()
+	info, err = h.getCfg(info, Message)
 	if err != nil {
 		colorlog.Errorf("Get config err [%s] : %v", Message.From.String(), err)
 		return
 	}
+	err = h.sendNewConfig(u, info, Message.MessageID)
+	if err != nil {
+		colorlog.Errorf("Get config err [%s] : %v", Message.From.String(), err)
+	}
 }
 
-func (h *Handler) getCfg(msg *tgbotapi.Message) (*Config, error) {
-	info := new(Config)
-	u, err := h.UserHandler.LoadAndInitUser(h.bot, msg.From.ID)
-	if err != nil {
-		colorlog.Errorf("Load And Init User Err: %v", err)
-		return nil, err
-	}
-	info.DrawConfig = *u.DefaultConfig()
-	arges := []ConfigFuncCorrentCfg{WithTag(), WithUc(), WithSeed()}
+func (h *Handler) getCfg(info *db.Config, msg *tgbotapi.Message) (*db.Config, error) {
 	if len(msg.Photo) > 0 {
-		arges = append(arges, WithPhoto())
 		info.Tag = msg.Caption
 		latestPhoto := msg.Photo[len(msg.Photo)-1]
 		info.Width = latestPhoto.Width
@@ -53,12 +69,7 @@ func (h *Handler) getCfg(msg *tgbotapi.Message) (*Config, error) {
 			colorlog.Errorf("Put file err: %v", err)
 		}
 		info.PrePhotoID = fi.FileID
-		err = h.getConfig(u, info, msg.MessageID)
-		if err != nil {
-			return nil, err
-		}
 	} else if msg.Document != nil {
-		arges = append(arges, WithPhoto())
 		if _, ok := utils.InString(msg.Document.MimeType, avilableDocumentType); !ok {
 			return nil, errors.New("document type is not avilable")
 		}
@@ -84,10 +95,6 @@ func (h *Handler) getCfg(msg *tgbotapi.Message) (*Config, error) {
 		if err != nil {
 			return nil, err
 		}
-		err = h.getConfig(u, info, msg.MessageID)
-		if err != nil {
-			return nil, err
-		}
 	} else {
 		if yaml.Unmarshal([]byte(msg.Text), info) == nil {
 			if info.PrePhotoID != "" {
@@ -101,27 +108,14 @@ func (h *Handler) getCfg(msg *tgbotapi.Message) (*Config, error) {
 						return nil, err
 					}
 				}
-				err = h.getConfig(u, info, msg.MessageID)
-				if err != nil {
-					return nil, err
-				}
 			} else {
 				info.PrePhotoID = ""
-				err := h.getConfig(u, info, msg.MessageID)
-				if err != nil {
-					return nil, err
-				}
 			}
 			return info, nil
 		} else {
 			info.Tag = msg.Text
-			err := h.getConfig(u, info, msg.MessageID)
-			if err != nil {
-				return nil, err
-			}
 		}
 	}
-	h.CorrectCfg(info, u, arges...)
 	return info, nil
 }
 
@@ -138,7 +132,7 @@ func creatBar(p float64, maxCount int) string {
 	return fmt.Sprintf("[%s>%s]", strings.Repeat("=", int(s)), strings.Repeat(" ", maxCount-int(s)))
 }
 
-func (h *Handler) drawAndSend(u *UserInfo, replyMsgID int, cfg *Config, prePhoto, ControlPhoto []byte) {
+func (h *Handler) drawAndSend(u *UserInfo, replyMsgID int, cfg *db.Config, prePhoto, ControlPhoto []byte) {
 	if u == nil {
 		colorlog.Error("user is nil")
 		return
@@ -154,12 +148,12 @@ func (h *Handler) drawAndSend(u *UserInfo, replyMsgID int, cfg *Config, prePhoto
 		colorlog.Error("cfg is nil")
 		return
 	}
-	nai, err := h.Api.New(&cfg.DrawConfig, prePhoto, ControlPhoto)
+	nai, err := h.Api.New(cfg, prePhoto, ControlPhoto)
 	if err != nil {
 		colorlog.Errorf("New config err [%s] : %v", u.ChatMember.User.String(), err)
 		return
 	}
-	colorlog.Debugf("Draw [%s] : %v", u.ChatMember.User.String(), cfg.DrawConfig)
+	colorlog.Debugf("Draw [%s] : %v", u.ChatMember.User.String(), cfg)
 	ctx, cf := context.WithCancel(context.Background())
 	defer cf()
 	resoult := nai.Draw(ctx, u.Permissions() != T_Subscribe)
@@ -200,7 +194,7 @@ func (h *Handler) drawAndSend(u *UserInfo, replyMsgID int, cfg *Config, prePhoto
 	}
 }
 
-func (h *Handler) superResolutionRun(u *UserInfo, replyMsgID int, cfg *Config, prePhoto []byte, resize int) {
+func (h *Handler) superResolutionRun(u *UserInfo, replyMsgID int, cfg *db.Config, prePhoto []byte, resize int) {
 	if u == nil {
 		colorlog.Error("user is nil")
 		return
@@ -248,7 +242,7 @@ func (h *Handler) superResolutionRun(u *UserInfo, replyMsgID int, cfg *Config, p
 	}
 }
 
-func (h *Handler) sendPhoto(b [][]byte, u *UserInfo, replyMsgID int, cfg *Config, button, skipCtrlPhotoSaveToDB bool) {
+func (h *Handler) sendPhoto(b [][]byte, u *UserInfo, replyMsgID int, cfg *db.Config, button, skipCtrlPhotoSaveToDB bool) {
 	if b == nil || u == nil || cfg == nil {
 		return
 	}
@@ -259,9 +253,9 @@ func (h *Handler) sendPhoto(b [][]byte, u *UserInfo, replyMsgID int, cfg *Config
 			colorlog.Errorf("Put file err: %v", err)
 		} else if !(skipCtrlPhotoSaveToDB && k >= (l-1)) {
 			if u.Permissions() != T_Subscribe {
-				h.DB.DB().Create(&db.PhotoInfo{FileID: fi.FileID, UnShare: false, UserID: u.ChatMember.User.ID, Config: cfg.DrawConfig, PrePhotoID: cfg.PrePhotoID, ControlPhotoID: cfg.ControlPhotoID})
+				h.DB.DB().Create(&db.PhotoInfo{FileID: fi.FileID, UnShare: false, UserID: u.ChatMember.User.ID, Config: *cfg})
 			} else {
-				h.DB.DB().Create(&db.PhotoInfo{FileID: fi.FileID, UnShare: !u.UserInfo.SharePhoto, UserID: u.ChatMember.User.ID, Config: cfg.DrawConfig, PrePhotoID: cfg.PrePhotoID, ControlPhotoID: cfg.ControlPhotoID})
+				h.DB.DB().Create(&db.PhotoInfo{FileID: fi.FileID, UnShare: !u.UserInfo.SharePhoto, UserID: u.ChatMember.User.ID, Config: *cfg})
 			}
 		}
 		msg := tgbotapi.NewDocument(u.ChatMember.User.ID, tgbotapi.FileBytes{Name: fmt.Sprint(fi.FileID, ".png"), Bytes: v})

@@ -121,6 +121,12 @@ func WithDefaultNum(DefaultNum int) ConfigFunc {
 	}
 }
 
+func WithDefaultUC(DefaultUC string) ConfigFunc {
+	return func(api *Handler) {
+		api.DefaultUC = DefaultUC
+	}
+}
+
 // https only
 func WithWebhook(webhookHost string) ConfigFunc {
 	return func(h *Handler) { h.webhookHost = webhookHost }
@@ -136,6 +142,17 @@ func WithCache(cache cache.Cache) ConfigFunc {
 
 var AllMode = [...]string{"DPM++ 2M Karras", "DPM++ 2M SDE Karras", "DPM++ SDE Karras", "Euler a", "DPM2", "DPM adaptive", "DPM2 a Karras", "DPM2 Karras", "DPM++ 2M", "DPM++ 2S a", "DPM++ 2S a Karras", "DPM++ SDE", "LMS Karras", "Euler", "DDIM", "Heun", "UniPC"}
 
+var Ucmap = map[string]string{
+	"low quality": "cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry",
+	"bad anatomy": "bad anatomy, bad hands, error, missing fingers, extra digit, fewer digits",
+}
+
+var defaultUC = fmt.Sprint("lowres, text, ", Ucmap["bad anatomy"], ", ", Ucmap["low quality"])
+
+func DefauleUC() string {
+	return defaultUC
+}
+
 func New(tgToken string, api *api.API, db *db.DB, configs ...ConfigFunc) (*Handler, error) {
 	if api == nil {
 		return nil, errors.New("api is nil")
@@ -146,6 +163,14 @@ func New(tgToken string, api *api.API, db *db.DB, configs ...ConfigFunc) (*Handl
 	h := &Handler{tgToken: tgToken, Api: api, DB: db, mode: AllMode[:], MaxHFSteps: MaxHFSteps, MaxNum: MaxNum, DefaultCfgScale: DefaultCfgScale, DefaultSteps: DefaultSteps, DefaultNum: DefaultNum}
 	for _, cf := range configs {
 		cf(h)
+	}
+
+	if len(h.mode) != 0 && h.DefaultMode == "" {
+		h.DefaultMode = h.mode[0]
+	}
+
+	if h.DefaultUC == "" {
+		h.DefaultUC = defaultUC
 	}
 
 	h.extraModelWithGroup = make(map[string][]gconfig.ExtraModel)
@@ -196,6 +221,7 @@ func New(tgToken string, api *api.API, db *db.DB, configs ...ConfigFunc) (*Handl
 	} else {
 		bot.Request(tgbotapi.DeleteWebhookConfig{DropPendingUpdates: true})
 		h.ch = bot.GetUpdatesChan(tgbotapi.NewUpdate(0))
+		h.ch.Clear()
 	}
 
 	return h, nil

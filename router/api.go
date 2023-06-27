@@ -2,7 +2,7 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
-	api "github.com/zijiren233/stable-diffusion-webui-bot/stable-diffusion-webui-api"
+	"github.com/zijiren233/stable-diffusion-webui-bot/db"
 )
 
 type I18N struct {
@@ -28,7 +28,7 @@ func uniqueI18NS(slice I18NS) I18NS {
 }
 
 type Any2Img struct {
-	api.DrawConfig
+	db.Config
 	PrePhoto     string `json:"pre_photo,omitempty"`
 	ControlPhoto string `json:"control_photo,omitempty"`
 }

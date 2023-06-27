@@ -11,7 +11,6 @@ import (
 
 	"github.com/zijiren233/stable-diffusion-webui-bot/db"
 	"github.com/zijiren233/stable-diffusion-webui-bot/i18n"
-	api "github.com/zijiren233/stable-diffusion-webui-bot/stable-diffusion-webui-api"
 	"github.com/zijiren233/stable-diffusion-webui-bot/utils"
 	"gorm.io/gorm"
 
@@ -235,7 +234,7 @@ func (u *UserInfo) ChangeDefaultSteps(steps int) error {
 	return u.db.Model(db.UserInfo{}).Where("user_id = ?", u.ChatMember.User.ID).Update("user_default_steps", u.UserInfo.UserDefaultSteps).Error
 }
 
-func (u *UserInfo) DefaultConfig() *api.DrawConfig {
+func (u *UserInfo) DefaultConfig() *db.Config {
 	cfg := u.handler.DefaultConfig()
 	if u.UserInfo.UserDefaultMODE != "" {
 		cfg.Mode = u.UserInfo.UserDefaultMODE

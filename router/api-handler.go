@@ -297,21 +297,21 @@ func (r *Router) testDrawConfig(ctx *gin.Context) {
 		ctx.Abort()
 		return
 	}
-	tmpCfg := &handler.Config{DrawConfig: cfg.DrawConfig}
+	// tmpCfg := &db.Config{DrawConfig: cfg.DrawConfig}
 	arges := []handler.ConfigFuncCorrentCfg{handler.WithMode(), handler.WithModel(), handler.WithSeed()}
 	if len(photo) != 0 {
-		arges = append(arges, handler.WithPhoto())
+		arges = append(arges, handler.WithStrength())
 	}
 	if len(ctrlphoto) != 0 {
 		arges = append(arges, handler.WithCtrlPhoto())
 	}
-	r.handler.CorrectCfg(tmpCfg, nil, arges...)
+	r.handler.CorrectCfg(&cfg.Config, nil, arges...)
 	var data = struct {
-		Cfg           api.DrawConfig `json:"config"`
-		Pre_photo     bool           `json:"pre_photo"`
-		Control_photo bool           `json:"control_photo"`
+		Cfg           db.Config `json:"config"`
+		Pre_photo     bool      `json:"pre_photo"`
+		Control_photo bool      `json:"control_photo"`
 	}{
-		Cfg:           cfg.DrawConfig,
+		Cfg:           cfg.Config,
 		Pre_photo:     len(photo) != 0,
 		Control_photo: len(ctrlphoto) != 0,
 	}
@@ -389,7 +389,7 @@ func (r *Router) drawPost(ctx *gin.Context) {
 		ctx.Abort()
 		return
 	}
-	c, err := r.handler.Api.New(&cfg.DrawConfig, photo, ctrlphoto)
+	c, err := r.handler.Api.New(&cfg.Config, photo, ctrlphoto)
 	if err != nil {
 		task.Down()
 		ctx.JSON(http.StatusInternalServerError, Resp{
@@ -400,9 +400,9 @@ func (r *Router) drawPost(ctx *gin.Context) {
 		return
 	}
 	var data = struct {
-		Cfg           api.DrawConfig `json:"config"`
-		Pre_photo     bool           `json:"pre_photo"`
-		Control_photo bool           `json:"control_photo"`
+		Cfg           db.Config `json:"config"`
+		Pre_photo     bool      `json:"pre_photo"`
+		Control_photo bool      `json:"control_photo"`
 	}{
 		Cfg:           c.GetCfg(),
 		Pre_photo:     len(photo) != 0,
@@ -900,9 +900,9 @@ func (r *Router) searchImages(ctx *gin.Context) {
 	for _, v := range photo {
 		switch ctx.Query("cfg_type") {
 		case "json":
-			resp = append(resp, Result{Id: v.FileID, Image: fmt.Sprintf("%s://%s/api/images/%s.png", parseflag.ApiScheme, parseflag.ApiHost, v.FileID), Cfg: handler.Config{DrawConfig: v.Config, PrePhotoID: v.PrePhotoID, ControlPhotoID: v.ControlPhotoID}, Width: 230, Height: int(float64(v.Config.Height) / float64(v.Config.Width) * 230)})
+			resp = append(resp, Result{Id: v.FileID, Image: fmt.Sprintf("%s://%s/api/images/%s.png", parseflag.ApiScheme, parseflag.ApiHost, v.FileID), Cfg: v.Config, Width: 230, Height: int(float64(v.Config.Height) / float64(v.Config.Width) * 230)})
 		default:
-			cfg, err := yaml.Marshal(handler.Config{DrawConfig: v.Config, PrePhotoID: v.PrePhotoID, ControlPhotoID: v.ControlPhotoID})
+			cfg, err := yaml.Marshal(v.Config)
 			if err != nil {
 				continue
 			}
@@ -997,9 +997,9 @@ func (r *Router) searchUserImages(ctx *gin.Context) {
 	for _, v := range photo {
 		switch ctx.Query("cfg_type") {
 		case "json":
-			resp = append(resp, Result{Id: v.FileID, Image: fmt.Sprintf("%s://%s/api/images/%s.png", parseflag.ApiScheme, parseflag.ApiHost, v.FileID), Cfg: handler.Config{DrawConfig: v.Config, PrePhotoID: v.PrePhotoID, ControlPhotoID: v.ControlPhotoID}, Width: 230, Height: int(float64(v.Config.Height) / float64(v.Config.Width) * 230)})
+			resp = append(resp, Result{Id: v.FileID, Image: fmt.Sprintf("%s://%s/api/images/%s.png", parseflag.ApiScheme, parseflag.ApiHost, v.FileID), Cfg: v.Config, Width: 230, Height: int(float64(v.Config.Height) / float64(v.Config.Width) * 230)})
 		default:
-			cfg, err := yaml.Marshal(handler.Config{DrawConfig: v.Config, PrePhotoID: v.PrePhotoID, ControlPhotoID: v.ControlPhotoID})
+			cfg, err := yaml.Marshal(v.Config)
 			if err != nil {
 				continue
 			}

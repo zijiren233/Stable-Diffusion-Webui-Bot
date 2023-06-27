@@ -348,8 +348,7 @@ func (h *Handler) superresolution(Message tgbotapi.Message, u *UserInfo) {
 		}
 	}
 RUN:
-	cfg := new(Config)
-	cfg.DrawConfig = api.DrawConfig{}
+	cfg := new(db.Config)
 	var prePhoto []byte
 	if len(msg.Photo) > 0 {
 		latestPhoto := msg.Photo[len(msg.Photo)-1]
@@ -526,7 +525,7 @@ func (h *Handler) img2tag(Message tgbotapi.Message, u *UserInfo) {
 			h.bot.Send(tgbotapi.NewEditMessageText(Message.Chat.ID, m2.MessageID, u.LoadLang("parsePhotoErr")))
 			return
 		}
-		ms := tgbotapi.NewEditMessageText(Message.Chat.ID, m2.MessageID, string((&Config{DrawConfig: *dc}).Fomate2TgHTML()))
+		ms := tgbotapi.NewEditMessageText(Message.Chat.ID, m2.MessageID, string(dc.Fomate2TgHTML()))
 		ms.ReplyMarkup = reDrawButton(u)
 		ms.ParseMode = "HTML"
 		h.bot.Send(ms)
@@ -623,7 +622,7 @@ func (h *Handler) guessTag(Message tgbotapi.Message, u *UserInfo) {
 		}
 		cfg.Tag = ret.Resoult
 		// cfg.CorrectCfg(true, false, false, false, false, false, false)
-		ms := tgbotapi.NewEditMessageText(Message.Chat.ID, m2.MessageID, string((&Config{DrawConfig: *cfg}).Fomate2TgHTML()))
+		ms := tgbotapi.NewEditMessageText(Message.Chat.ID, m2.MessageID, string(cfg.Fomate2TgHTML()))
 		ms.ParseMode = "HTML"
 		ms.ReplyMarkup = reDrawButton(u)
 		h.bot.Send(ms)
