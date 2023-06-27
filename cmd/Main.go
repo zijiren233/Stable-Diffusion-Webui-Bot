@@ -75,6 +75,7 @@ func Main() {
 	}
 	go r.Eng().Run(fmt.Sprintf("%s:%d", parseflag.Listen, parseflag.Port))
 	go h.Run(context.Background())
+	h.SetCommand()
 	colorlog.Infof("Service started successfully!\n%s://%s:%d", parseflag.ApiScheme, parseflag.Listen, parseflag.Port)
 	select {}
 }
