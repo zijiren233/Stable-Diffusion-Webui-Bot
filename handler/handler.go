@@ -55,6 +55,18 @@ const (
 
 type ConfigFunc func(h *Handler)
 
+func WithGuide(Guide string) ConfigFunc {
+	return func(api *Handler) {
+		api.guide = Guide
+	}
+}
+
+func WithGroup(Group string) ConfigFunc {
+	return func(api *Handler) {
+		api.group = Group
+	}
+}
+
 func WithExtraModel(ExtraModel []gconfig.ExtraModel) ConfigFunc {
 	return func(api *Handler) {
 		api.ExtraModel = ExtraModel

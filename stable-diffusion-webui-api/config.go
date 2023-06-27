@@ -187,7 +187,7 @@ func (api *API) New(cfg *DrawConfig, initPhoto, ControlPhoto []byte) (*config, e
 	dCfg.NegativePrompt = cfg.Uc
 	dCfg.Num = 1
 	dCfg.Count = cfg.Num
-	c := &config{cfg: dCfg, rawCfg: *cfg}
+	c := &config{cfg: dCfg, rawCfg: *cfg, a: api}
 	if len(initPhoto) != 0 {
 		dCfg.ResizeMode = 2
 		c.cfg.InitImages = []string{base64.StdEncoding.EncodeToString(initPhoto)}
@@ -231,7 +231,7 @@ func (api *API) NewSuperResolution(photo [][]byte, resize int) (*superResolution
 	if photo == nil {
 		return nil, errors.New("photo is nil")
 	}
-	cfg := &superResolutionCfg{ExtrasUpscaler2Visibility: 1, UpscalingResize: resize, Upscaler1: "R-ESRGAN 4x+ Anime6B"}
+	cfg := &superResolutionCfg{ExtrasUpscaler2Visibility: 1, UpscalingResize: resize, Upscaler1: "R-ESRGAN 4x+ Anime6B", a: api}
 	for k, v := range photo {
 		fileType, err := utils.GetType(v)
 		if err != nil {
@@ -252,7 +252,7 @@ func (api *API) NewSuperResolutionWithBase64(photo []string, multiplier int) (*s
 	if len(photo) == 0 {
 		return nil, errors.New("photo is nil")
 	}
-	cfg := &superResolutionCfg{ExtrasUpscaler2Visibility: 1, UpscalingResize: multiplier, Upscaler1: "R-ESRGAN 4x+ Anime6B"}
+	cfg := &superResolutionCfg{ExtrasUpscaler2Visibility: 1, UpscalingResize: multiplier, Upscaler1: "R-ESRGAN 4x+ Anime6B", a: api}
 	for k, v := range photo {
 		b, err := base64.StdEncoding.DecodeString(v)
 		if err != nil {
@@ -277,7 +277,7 @@ func (api *API) NewCtrlPhoto(photo [][]byte, Processor string, ResSize int) (*ct
 	if ResSize < 0 {
 		return nil, errors.New("size is less than zero")
 	}
-	cfg := &ctrlPhotoCfg{ControlnetModule: Processor}
+	cfg := &ctrlPhotoCfg{ControlnetModule: Processor, a: api}
 	if ResSize == 0 {
 		width, hight, err := utils.GetPhotoSize(photo[0])
 		if err != nil {
@@ -304,7 +304,7 @@ func (api *API) NewCtrlPhotoWithBash64(photo []string, Processor string, ResSize
 	if ResSize < 0 {
 		return nil, errors.New("size is less than zero")
 	}
-	cfg := &ctrlPhotoCfg{ControlnetModule: Processor, ControlnetInputImages: photo}
+	cfg := &ctrlPhotoCfg{ControlnetModule: Processor, ControlnetInputImages: photo, a: api}
 	if ResSize == 0 {
 		b, err := base64.StdEncoding.DecodeString(photo[0])
 		if err != nil {
@@ -333,7 +333,7 @@ func (api *API) NewInterrogate(photo []byte) (*interrogateCfg, error) {
 	if err != nil {
 		return nil, err
 	}
-	cfg := &interrogateCfg{Image: fmt.Sprint("data:", fileType, ";base64,", base64.StdEncoding.EncodeToString(photo)), Model: "deepdanbooru"}
+	cfg := &interrogateCfg{a: api, Image: fmt.Sprint("data:", fileType, ";base64,", base64.StdEncoding.EncodeToString(photo)), Model: "deepdanbooru"}
 	return cfg, nil
 }
 

@@ -62,6 +62,8 @@ func Main() {
 		handler.WithDefaultSteps(25),
 		handler.WithOwnerID(parseflag.OwnerID),
 		handler.WithExtraModel(gconfig.ALLExtraModel()),
+		handler.WithGroup(gconfig.GROUP()),
+		handler.WithGuide(gconfig.GUIDE()),
 	}
 	if parseflag.WebhookHost != "" {
 		hConfigs = append(hConfigs, handler.WithWebhook(parseflag.WebhookHost))
