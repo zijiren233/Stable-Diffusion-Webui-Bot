@@ -181,7 +181,9 @@ func New(tgToken string, api *api.API, db *db.DB, configs ...ConfigFunc) (*Handl
 			}
 			for _, g := range v.Group {
 				h.extraModelWithGroup[g] = append(h.extraModelWithGroup[g], v)
-				if _, ok := utils.InString(g, h.ExtraModelAllGroup); !ok {
+				if k := utils.In(h.ExtraModelAllGroup, func(s string) bool {
+					return g == s
+				}); k == -1 {
 					h.ExtraModelAllGroup = append(h.ExtraModelAllGroup, g)
 				}
 			}

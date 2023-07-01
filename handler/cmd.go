@@ -154,10 +154,9 @@ func (h *Handler) handelInvite(Message tgbotapi.Message, u *UserInfo, args []str
 		return
 	}
 	if id == u.UserInfo.UserID || u.Subscribe.CreatedAt.Before(time.Now().Add(time.Minute*(-15))) || func() bool {
-		_, in := utils.In(invitedList, func(v int64) bool {
+		return utils.In(invitedList, func(v int64) bool {
 			return v == u.Subscribe.UserID
-		})
-		return in
+		}) != -1
 	}() {
 		msg.Text = fmt.Sprintf("%s\n\nYou Can Use Website\nUser ID: `%d`\nPassword: `%s`", u.LoadLang("help"), u.UserInfo.UserID, u.Passwd())
 		msg.ParseMode = "Markdown"
@@ -372,7 +371,9 @@ RUN:
 		}
 		cfg.PrePhotoID = fi.FileID
 	} else if msg.Document != nil {
-		if _, ok := utils.InString(msg.Document.MimeType, avilableDocumentType); !ok {
+		if k := utils.In(avilableDocumentType, func(s string) bool {
+			return msg.Document.MimeType == s
+		}); k == -1 {
 			colorlog.Errorf("Document Type err [%s] : %s", u.ChatMember.User.String(), msg.Document.MimeType)
 			return
 		}
@@ -582,7 +583,9 @@ func (h *Handler) guessTag(Message tgbotapi.Message, u *UserInfo) {
 				return
 			}
 		} else if msg.Document != nil {
-			if _, ok := utils.InString(msg.Document.MimeType, avilableDocumentType); !ok {
+			if k := utils.In(avilableDocumentType, func(s string) bool {
+				return msg.Document.MimeType == s
+			}); k == -1 {
 				colorlog.Errorf("Guess Tag err: %v", "document type is not avilable")
 				h.bot.Send(tgbotapi.NewEditMessageText(Message.Chat.ID, m2.MessageID, "document type is not avilable"))
 				return

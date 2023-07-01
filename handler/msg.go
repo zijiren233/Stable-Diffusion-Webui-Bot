@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"math"
@@ -10,6 +11,8 @@ import (
 
 	"github.com/zijiren233/stable-diffusion-webui-bot/db"
 	parseflag "github.com/zijiren233/stable-diffusion-webui-bot/flag"
+	"github.com/zijiren233/stable-diffusion-webui-bot/gconfig"
+	api "github.com/zijiren233/stable-diffusion-webui-bot/stable-diffusion-webui-api"
 	"github.com/zijiren233/stable-diffusion-webui-bot/utils"
 
 	tgbotapi "github.com/zijiren233/tg-bot-api/v6"
@@ -70,7 +73,9 @@ func (h *Handler) getCfg(info *db.Config, msg *tgbotapi.Message) (*db.Config, er
 		}
 		info.PrePhotoID = fi.FileID
 	} else if msg.Document != nil {
-		if _, ok := utils.InString(msg.Document.MimeType, avilableDocumentType); !ok {
+		if k := utils.In(avilableDocumentType, func(s string) bool {
+			return msg.Document.MimeType == s
+		}); k == -1 {
 			return nil, errors.New("document type is not avilable")
 		}
 		info.Tag = msg.Caption
@@ -132,6 +137,65 @@ func creatBar(p float64, maxCount int) string {
 	return fmt.Sprintf("[%s>%s]", strings.Repeat("=", int(s)), strings.Repeat(" ", maxCount-int(s)))
 }
 
+func (h *Handler) NewDrawConfig(cfg *db.Config, initPhoto, ControlPhoto []byte) *api.Config {
+	config := &api.Config{}
+
+	if k := utils.In[gconfig.Model](h.Models, func(m gconfig.Model) bool {
+		return m.Name == cfg.Model
+	}); k != -1 {
+		config.Model = h.Models[k].File
+		config.Vae = h.Models[k].Vae
+		config.ClipSkip = h.Models[k].ClipSkip
+	}
+
+	config.Prompt = cfg.Tag
+	config.Seed = cfg.Seed
+	config.SamplerName = cfg.Mode
+	config.SamplerIndex = cfg.Mode
+	config.Width = cfg.Width
+	config.Height = cfg.Height
+	config.CfgScale = cfg.CfgScale
+	config.Steps = cfg.Steps
+	config.NegativePrompt = cfg.Uc
+	config.Num = 1
+	config.Count = cfg.Num
+
+	if len(initPhoto) != 0 {
+		config.ResizeMode = 2
+		config.InitImages = []string{base64.StdEncoding.EncodeToString(initPhoto)}
+		config.DenoisingStrength = cfg.Strength
+	} else {
+		config.Width /= 2
+		config.Height /= 2
+		config.EnableHr = true
+		config.DenoisingStrength = 0.55
+		config.HrScale = 2
+		config.HrUpscaler = "R-ESRGAN 4x+ Anime6B"
+		if config.Steps < 20 {
+			config.HrSecondPassSteps = config.Steps
+		} else {
+			config.HrSecondPassSteps = 20
+		}
+	}
+	if len(ControlPhoto) != 0 {
+		var max int
+		if config.Width > config.Height {
+			max = config.Width
+		} else {
+			max = config.Height
+		}
+		ctrl := api.ControlnetUnits{
+			Lowvram:      false,
+			InputImage:   base64.StdEncoding.EncodeToString(ControlPhoto),
+			Module:       cfg.ControlPreprocess,
+			Model:        cfg.ControlProcess,
+			ProcessorRes: max,
+		}
+		config.AlwaysonScripts.Controlnet.Args = append(config.AlwaysonScripts.Controlnet.Args, ctrl)
+	}
+	return config
+}
+
 func (h *Handler) drawAndSend(u *UserInfo, replyMsgID int, cfg *db.Config, prePhoto, ControlPhoto []byte) {
 	if u == nil {
 		colorlog.Error("user is nil")
@@ -148,7 +212,8 @@ func (h *Handler) drawAndSend(u *UserInfo, replyMsgID int, cfg *db.Config, prePh
 		colorlog.Error("cfg is nil")
 		return
 	}
-	nai, err := h.Api.New(cfg, prePhoto, ControlPhoto)
+
+	nai, err := h.Api.New(h.NewDrawConfig(cfg, prePhoto, ControlPhoto), prePhoto, ControlPhoto)
 	if err != nil {
 		colorlog.Errorf("New config err [%s] : %v", u.ChatMember.User.String(), err)
 		return

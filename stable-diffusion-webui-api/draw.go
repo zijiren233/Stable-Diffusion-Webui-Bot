@@ -117,7 +117,7 @@ func (cfg *config) draw() {
 	if err != nil {
 		return
 	}
-	api, done := cfg.a.next(cfg.rawCfg.Model)
+	api, done := cfg.a.next(cfg.cfg.Model)
 	defer done()
 	colorlog.Debug("get api: ", api.Url)
 	cfg.api = struct {
@@ -127,7 +127,7 @@ func (cfg *config) draw() {
 		api:    api,
 		status: Status{Progress: 0.05},
 	}
-	err = api.ChangeOption(cfg.rawCfg.Model)
+	err = api.ChangeOption(cfg.cfg)
 	if err != nil {
 		return
 	}
@@ -173,7 +173,7 @@ func (cfg *superResolutionCfg) superResolution() {
 	api, done := cfg.a.next("")
 	defer done()
 	colorlog.Debug("get api: ", api.Url)
-	err = api.ChangeOption("")
+	err = api.ChangeOption(nil)
 	if err != nil {
 		return
 	}
@@ -207,7 +207,7 @@ func (cfg *ctrlPhotoCfg) ctrlPhoto() {
 	api, done := cfg.a.next("")
 	defer done()
 	colorlog.Debug("get api: ", api.Url)
-	err = api.ChangeOption("")
+	err = api.ChangeOption(nil)
 	if err != nil {
 		return
 	}
@@ -241,7 +241,7 @@ func (cfg *interrogateCfg) interrogate() {
 	api, done := cfg.a.next("")
 	defer done()
 	colorlog.Debug("get api: ", api.Url)
-	err = api.ChangeOption("")
+	err = api.ChangeOption(nil)
 	if err != nil {
 		return
 	}

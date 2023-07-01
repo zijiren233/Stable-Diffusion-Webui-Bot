@@ -64,16 +64,17 @@ type apiUrl struct {
 	a            *API
 }
 
-func (api *apiUrl) ChangeOption(model string) error {
+func (api *apiUrl) ChangeOption(config *Config) error {
 	option := map[string]interface{}{"add_version_to_infotext": false, "lora_add_hashes_to_infotext": false, "add_model_hash_to_info": false, "add_model_name_to_info": true, "deepbooru_use_spaces": true, "interrogate_clip_dict_limit": 0, "interrogate_return_ranks": true, "deepbooru_sort_alpha": false, "interrogate_deepbooru_score_threshold": 0.5, "interrogate_clip_min_length": 15, "interrogate_clip_max_length": 50, "live_previews_enable": false, "sd_vae_as_default": false, "sd_checkpoint_cache": 0, "sd_vae_checkpoint_cache": 0, "grid_save": false, "eta_noise_seed_delta": 31337, "eta_ancestral": 1, "samples_save": false, "enable_emphasis": true}
-	if model != "" {
-		i, ok := utils.In[gconfig.Model](api.a.models, func(m gconfig.Model) bool {
-			return m.Name == model
-		})
-		if ok {
-			option["sd_model_checkpoint"] = api.a.models[i].File
-			option["sd_vae"] = api.a.models[i].Vae + api.a.models[i].VaeExt
-			option["CLIP_stop_at_last_layers"] = api.a.models[i].ClipSkip
+	if config != nil {
+		if config.Model != "" {
+			option["sd_model_checkpoint"] = config.Model
+		}
+		if config.Vae != "" {
+			option["sd_vae"] = config.Vae
+		}
+		if config.ClipSkip != 0 {
+			option["CLIP_stop_at_last_layers"] = config.ClipSkip
 		}
 	}
 	b, err := json.Marshal(option)
@@ -95,9 +96,9 @@ func (api *apiUrl) ChangeOption(model string) error {
 		return err
 	}
 	if string(body) == "null" {
-		if model != "" {
-			api.CurrentModel = model
-			api.LoadedModels.Store(model, nil)
+		if config != nil && config.Model != "" {
+			api.CurrentModel = config.Model
+			api.LoadedModels.Store(config.Model, nil)
 		}
 		return nil
 	}
@@ -245,7 +246,7 @@ func (a *API) failover() {
 					if json.Unmarshal(b, &api.Models) != nil {
 						return false, errReturn
 					}
-					if !ModelAllowed(api.Models, a.models) {
+					if !a.ModelAllowed(api.Models) {
 						return false, errModels
 					}
 					return false, nil
@@ -259,9 +260,9 @@ func (a *API) failover() {
 					})
 				} else {
 					if v, ok := working.Load(api); ok && !v.(bool) {
-						api.CurrentModel = a.models[0].Name
+						api.CurrentModel = a.models[0]
 					}
-					api.LoadedModels.Store(a.models[0].Name, nil)
+					api.LoadedModels.Store(a.models[0], nil)
 					working.Store(api.Url, true)
 					atomic.AddUint32(&workers, 1)
 				}
@@ -277,13 +278,13 @@ func (a *API) failover() {
 	}
 }
 
-func ModelAllowed(Model []Model, AllAllowModels []gconfig.Model) bool {
-	if len(AllAllowModels) > len(Model) {
+func (a *API) ModelAllowed(Model []Model) bool {
+	if len(a.models) > len(Model) {
 		return false
 	}
-	for _, v := range AllAllowModels {
+	for _, v := range a.models {
 		for k, model := range Model {
-			if v.File == model.ModelName {
+			if v == model.ModelName {
 				break
 			}
 			if k == len(Model)-1 {

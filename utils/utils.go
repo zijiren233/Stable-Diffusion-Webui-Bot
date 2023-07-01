@@ -74,19 +74,13 @@ func GetFileNameExt(filename string) string {
 	return filepath.Ext(filename)
 }
 
-func InString(target string, str_array []string) (int, bool) {
-	return In(str_array, func(v string) bool {
-		return v == target
-	})
-}
-
-func In[T comparable](slice []T, fun func(v T) bool) (int, bool) {
+func In[T comparable](slice []T, fun func(v T) bool) int {
 	for k, v := range slice {
 		if fun(v) {
-			return k, true
+			return k
 		}
 	}
-	return -1, false
+	return -1
 }
 
 func DeleteSlice[T comparable](a []T, k T) []T {

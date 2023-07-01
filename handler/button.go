@@ -356,7 +356,9 @@ func (h *Handler) generateAllExtraModelButton(u *UserInfo, page, groupIndex int,
 		if k != 0 && k%MAXROW == 0 {
 			rows += 1
 		}
-		if _, ok := utils.InString(v.Name, options); ok {
+		if i := utils.In(options, func(a string) bool {
+			return a == v.Name
+		}); i != -1 {
 			row[rows] = append(row[rows], tgbotapi.NewInlineKeyboardButtonData(fmt.Sprint(`✅ `, u.LoadExtraLang(v.Name)), fmt.Sprint("setCfg:sL:", groupIndex, ":", index, ":-", page)))
 		} else {
 			row[rows] = append(row[rows], tgbotapi.NewInlineKeyboardButtonData(u.LoadExtraLang(v.Name), fmt.Sprint("setCfg:sL:", groupIndex, ":", index, ":-", page)))
@@ -503,7 +505,9 @@ func (h *Handler) generateExtraModelButton(u *UserInfo, page, groupIndex int, op
 	}
 	for _, v := range model {
 		row[0] = append(row[0], tgbotapi.NewInlineKeyboardButtonData("+", fmt.Sprint("setCfg:L:", groupIndex, ":", index, ":+", ":", page)))
-		if _, ok := utils.InString(v.Name, options); ok {
+		if i := utils.In(options, func(a string) bool {
+			return a == v.Name
+		}); i != -1 {
 			row[1] = append(row[1], tgbotapi.NewInlineKeyboardButtonData(fmt.Sprint(`✅ `, u.LoadExtraLang(v.Name)), fmt.Sprint("setCfg:sL:", groupIndex, ":", index, ":", page)))
 		} else {
 			row[1] = append(row[1], tgbotapi.NewInlineKeyboardButtonData(u.LoadExtraLang(v.Name), fmt.Sprint("setCfg:sL:", groupIndex, ":", index, ":", page)))
@@ -581,7 +585,9 @@ func (h *Handler) generateAllTagButton(u *UserInfo, page int, options, allTag []
 		if k != 0 && k%MAXROW == 0 {
 			rows += 1
 		}
-		if _, ok := utils.InString(v, options); ok {
+		if i := utils.In(options, func(a string) bool {
+			return a == v
+		}); i != -1 {
 			row[rows] = append(row[rows], tgbotapi.NewInlineKeyboardButtonData(fmt.Sprint(`✅ `, v), fmt.Sprint("setCfg:sT:", v, ":-", page)))
 		} else {
 			row[rows] = append(row[rows], tgbotapi.NewInlineKeyboardButtonData(fmt.Sprint(`❌ `, v), fmt.Sprint("setCfg:sT:", v, ":-", page)))
@@ -655,7 +661,9 @@ func (h *Handler) editTagButton(u *UserInfo, page int, options, allTag []string)
 		row[0] = append(row[0], tgbotapi.NewInlineKeyboardButtonData("+", fmt.Sprint("setCfg:T:", v, ":+", ":", page)))
 	}
 	for _, v := range model {
-		if _, ok := utils.InString(v, options); ok {
+		if i := utils.In(options, func(a string) bool {
+			return a == v
+		}); i != -1 {
 			row[1] = append(row[1], tgbotapi.NewInlineKeyboardButtonData(fmt.Sprint(`✅ `, v), fmt.Sprint("setCfg:sT:", v, ":", page)))
 		} else {
 			row[1] = append(row[1], tgbotapi.NewInlineKeyboardButtonData(v, fmt.Sprint("setCfg:sT:", v, ":", page)))
@@ -737,7 +745,9 @@ func (h *Handler) generateAllUcButton(u *UserInfo, page int, options, allUc []st
 		if k != 0 && k%MAXROW == 0 {
 			rows += 1
 		}
-		if _, ok := utils.InString(v, options); ok {
+		if i := utils.In(options, func(a string) bool {
+			return a == v
+		}); i != -1 {
 			row[rows] = append(row[rows], tgbotapi.NewInlineKeyboardButtonData(fmt.Sprint(`✅ `, v), fmt.Sprint("setCfg:sU:", v, ":-", page)))
 		} else {
 			row[rows] = append(row[rows], tgbotapi.NewInlineKeyboardButtonData(v, fmt.Sprint("setCfg:sU:", v, ":-", page)))
@@ -810,7 +820,9 @@ func (h *Handler) editUcButton(u *UserInfo, page int, options, allUc []string) *
 		row[0] = append(row[0], tgbotapi.NewInlineKeyboardButtonData("+", fmt.Sprint("setCfg:uc:", v, ":+", ":", page)))
 	}
 	for _, v := range model {
-		if _, ok := utils.InString(v, options); ok {
+		if i := utils.In(options, func(a string) bool {
+			return a == v
+		}); i != -1 {
 			row[1] = append(row[1], tgbotapi.NewInlineKeyboardButtonData(fmt.Sprint(`✅ `, v), fmt.Sprint("setCfg:sU:", v, ":", page)))
 		} else {
 			row[1] = append(row[1], tgbotapi.NewInlineKeyboardButtonData(v, fmt.Sprint("setCfg:sU:", v, ":", page)))

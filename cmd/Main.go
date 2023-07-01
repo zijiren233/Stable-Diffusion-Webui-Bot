@@ -68,7 +68,13 @@ func Main() {
 	if parseflag.WebhookHost != "" {
 		hConfigs = append(hConfigs, handler.WithWebhook(parseflag.WebhookHost))
 	}
-	a, err := api.New(gconfig.API(), gconfig.MODELS())
+	a, err := api.New(gconfig.API(), func() []string {
+		t := []string{}
+		for _, m := range gconfig.MODELS() {
+			t = append(t, m.File)
+		}
+		return t
+	}())
 	if err != nil {
 		panic(err)
 	}

@@ -389,7 +389,8 @@ func (r *Router) drawPost(ctx *gin.Context) {
 		ctx.Abort()
 		return
 	}
-	c, err := r.handler.Api.New(&cfg.Config, photo, ctrlphoto)
+	r.handler.CorrectCfg(&cfg.Config, UserInfo, handler.WithTag(), handler.WithUc(), handler.WithMode(), handler.WithModel())
+	c, err := r.handler.Api.New(r.handler.NewDrawConfig(&cfg.Config, photo, ctrlphoto), photo, ctrlphoto)
 	if err != nil {
 		task.Down()
 		ctx.JSON(http.StatusInternalServerError, Resp{
@@ -404,7 +405,7 @@ func (r *Router) drawPost(ctx *gin.Context) {
 		Pre_photo     bool      `json:"pre_photo"`
 		Control_photo bool      `json:"control_photo"`
 	}{
-		Cfg:           c.GetCfg(),
+		Cfg:           cfg.Config,
 		Pre_photo:     len(photo) != 0,
 		Control_photo: len(ctrlphoto) != 0,
 	}

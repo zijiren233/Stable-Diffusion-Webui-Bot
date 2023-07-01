@@ -203,7 +203,9 @@ func (u *UserInfo) ChangeDefaultMODE(mode string) error {
 		return nil
 	}
 	m := u.handler.mode
-	if _, ok := utils.InString(mode, m[:]); !ok {
+	if k := utils.In(m[:], func(s string) bool {
+		return mode == s
+	}); k == -1 {
 		return errors.New("mode not support")
 	}
 	u.UserInfo.UserDefaultMODE = mode

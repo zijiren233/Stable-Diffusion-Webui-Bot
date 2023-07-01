@@ -41,9 +41,9 @@ func (h *Handler) ParsePreProcess(PreProcess string) string {
 	if PreProcess == "" {
 		return h.ControlPreProcess[0].Name
 	}
-	if _, ok := utils.In(h.ControlPreProcess, func(c gconfig.ControlPreProcess) bool {
+	if k := utils.In(h.ControlPreProcess, func(c gconfig.ControlPreProcess) bool {
 		return c.Name == PreProcess
-	}); !ok {
+	}); k == -1 {
 		return h.ControlPreProcess[0].Name
 	}
 	return ""
@@ -53,9 +53,9 @@ func (h *Handler) ParseProcess(Process string) string {
 	if Process == "" {
 		return h.ControlProcess[0].Name
 	}
-	if _, ok := utils.In(h.ControlProcess, func(c gconfig.ControlProcess) bool {
+	if k := utils.In(h.ControlProcess, func(c gconfig.ControlProcess) bool {
 		return c.Name == Process
-	}); !ok {
+	}); k == -1 {
 		return h.ControlProcess[0].Name
 	}
 	return ""
@@ -263,7 +263,9 @@ func (h *Handler) CorrectCfg(cfg *db.Config, u *UserInfo, c ...ConfigFuncCorrent
 	cfg.Width -= cfg.Width % 8
 	cfg.Height -= cfg.Height % 8
 	if config.Mode {
-		if _, ok := utils.InString(cfg.Mode, h.mode); !ok {
+		if k := utils.In(h.mode, func(s string) bool {
+			return cfg.Mode == s
+		}); k == -1 {
 			cfg.Mode = h.mode[0]
 		}
 	}

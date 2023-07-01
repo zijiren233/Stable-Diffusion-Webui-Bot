@@ -482,9 +482,11 @@ func (h *Handler) setCfg(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.C
 		}
 		allTag := getAllTag(cfg.Tag)
 		var nowTag []string
-		if k, ok := utils.InString(tag, allTag); ok {
-			nowTag = append(nowTag, allTag[:k]...)
-			nowTag = append(nowTag, allTag[k+1:]...)
+		if i := utils.In(allTag, func(t string) bool {
+			return t == tag
+		}); i != -1 {
+			nowTag = append(nowTag, allTag[:i]...)
+			nowTag = append(nowTag, allTag[i+1:]...)
 			cfg.Tag = strings.Join(nowTag, ", ")
 		} else {
 			name, strength := getTagName(tag)
@@ -511,7 +513,9 @@ func (h *Handler) setCfg(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.C
 		i = strings.LastIndex(before, ":")
 		tag := before[:i]
 		allTag := getAllTag(cfg.Tag)
-		if k, ok := utils.InString(tag, allTag); ok {
+		if k := utils.In(allTag, func(t string) bool {
+			return t == tag
+		}); k != -1 {
 			name, f := getTagName(allTag[k])
 			if f <= 0 {
 				f = 1
@@ -615,7 +619,9 @@ func (h *Handler) setCfg(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.C
 		}
 		allUc := getAllTag(cfg.Uc)
 		var nowUc []string
-		if k, ok := utils.InString(uc, allUc); ok {
+		if k := utils.In(allUc, func(u string) bool {
+			return u == uc
+		}); k != -1 {
 			nowUc = append(nowUc, allUc[:k]...)
 			nowUc = append(nowUc, allUc[k+1:]...)
 			cfg.Uc = strings.Join(nowUc, ", ")
@@ -644,7 +650,9 @@ func (h *Handler) setCfg(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.C
 		i = strings.LastIndex(before, ":")
 		uc := before[:i]
 		allUc := getAllTag(cfg.Uc)
-		if k, ok := utils.InString(uc, allUc); ok {
+		if k := utils.In(allUc, func(u string) bool {
+			return u == uc
+		}); k != -1 {
 			name, f := getTagName(allUc[k])
 			if f <= 0 {
 				f = 1
@@ -715,7 +723,9 @@ func (h *Handler) setCfg(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.C
 			if reLora.MatchString(cfg.Tag) {
 				cfg.Tag = reLora.ReplaceAllString(cfg.Tag, "")
 				if len(l.TriggerWords) != 0 {
-					if k, ok := utils.InString(l.TriggerWords[0], getAllTagName(cfg.Tag)); ok {
+					if k := utils.In(getAllTagName(cfg.Tag), func(a string) bool {
+						return a == l.TriggerWords[0]
+					}); k != -1 {
 						s := getAllTag(cfg.Tag)
 						cfg.Tag = strings.Join(append(s[:k], s[k+1:]...), ", ")
 					}
@@ -723,7 +733,9 @@ func (h *Handler) setCfg(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.C
 			} else {
 				showPreview = true
 				if len(l.TriggerWords) != 0 {
-					if _, ok := utils.InString(l.TriggerWords[0], getAllTagName(cfg.Tag, reDefaultTag)); !ok {
+					if k := utils.In(getAllTagName(cfg.Tag, reDefaultTag), func(a string) bool {
+						return a == l.TriggerWords[0]
+					}); k == -1 {
 						cfg.Tag += fmt.Sprintf(", <lora:%s:0.6>, %s", model, l.TriggerWords[0])
 					} else {
 						cfg.Tag += fmt.Sprintf(", <lora:%s:0.6>", model)
@@ -817,7 +829,9 @@ func (h *Handler) setCfg(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.C
 			} else {
 				showPreview = true
 				if len(l.TriggerWords) != 0 {
-					if _, ok := utils.InString(l.TriggerWords[0], getAllTagName(cfg.Tag)); !ok {
+					if k := utils.In(getAllTagName(cfg.Tag), func(a string) bool {
+						return a == l.TriggerWords[0]
+					}); k == -1 {
 						cfg.Tag += fmt.Sprintf(", <%s:%s:0.6>, %s", l.Type, model, l.TriggerWords[0])
 					} else {
 						cfg.Tag += fmt.Sprintf(", <%s:%s:0.6>", l.Type, model)
@@ -940,7 +954,9 @@ func (h *Handler) setCfg(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.C
 				}
 				cfg.PrePhotoID = fi.FileID
 			} else if msg.Document != nil {
-				if _, ok := utils.InString(msg.Document.MimeType, avilableDocumentType); !ok {
+				if k := utils.In(avilableDocumentType, func(s string) bool {
+					return msg.Document.MimeType == s
+				}); k == -1 {
 					colorlog.Errorf("Get photo err: %s", "document type is not avilable")
 					break
 				}
@@ -1031,7 +1047,9 @@ func (h *Handler) setCfg(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.C
 				}
 				cfg.ControlPhotoID = fi.FileID
 			} else if msg.Document != nil {
-				if _, ok := utils.InString(msg.Document.MimeType, avilableDocumentType); !ok {
+				if k := utils.In(avilableDocumentType, func(s string) bool {
+					return msg.Document.MimeType == s
+				}); k == -1 {
 					colorlog.Errorf("Get photo err: %s", "document type is not avilable")
 					break
 				}
