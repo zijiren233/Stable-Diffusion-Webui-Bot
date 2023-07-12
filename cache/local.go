@@ -11,14 +11,14 @@ import (
 	"time"
 
 	"github.com/bluele/gcache"
-	"github.com/im7mortal/kmutex"
+	"github.com/zijiren233/ksync"
 	"github.com/zijiren233/stable-diffusion-webui-bot/utils"
 	"golang.org/x/time/rate"
 )
 
 type LocalCache struct {
 	fileLimit *rate.Limiter
-	kFileLock *kmutex.Kmutex
+	kFileLock *ksync.Kmutex
 	savePath  string
 	cacheNum  int
 	readLimit int
@@ -57,7 +57,7 @@ func NewCache(configs ...LocalCacheFunc) (Cache, error) {
 		lc.cacheNum = 1
 	}
 	lc.fileLimit = rate.NewLimiter(rate.Limit(lc.readLimit), 1)
-	lc.kFileLock = kmutex.New()
+	lc.kFileLock = ksync.NewKmutex()
 	lc.cache = gcache.New(lc.cacheNum).LRU().Build()
 	return lc, nil
 }
@@ -81,7 +81,7 @@ func (l *LocalCache) Put(data []byte) (info FileInfo, err error) {
 	info.FilePath = l.id2Path(id)
 	l.fileLimit.Wait(context.Background())
 	l.kFileLock.Lock(id)
-	defer l.kFileLock.Locker(id)
+	defer l.kFileLock.Unlock(id)
 	info.Info, err = os.Stat(info.FilePath)
 	if err == nil && info.Info.Size() == int64(len(data)) {
 		return

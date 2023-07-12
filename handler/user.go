@@ -18,7 +18,7 @@ import (
 	parseflag "github.com/zijiren233/stable-diffusion-webui-bot/flag"
 	tgbotapi "github.com/zijiren233/tg-bot-api/v6"
 
-	"github.com/im7mortal/kmutex"
+	"github.com/zijiren233/ksync"
 )
 
 type permissions uint
@@ -39,14 +39,14 @@ type UserInfo struct {
 }
 
 type UserHandler struct {
-	userL     *kmutex.Kmutex
+	userL     *ksync.Kmutex
 	userCache *sync.Map
 	handler   *Handler
 	db        *gorm.DB
 }
 
 func NewUserHandler(handler *Handler, db *gorm.DB) *UserHandler {
-	return &UserHandler{handler: handler, db: db, userL: kmutex.New(), userCache: &sync.Map{}}
+	return &UserHandler{handler: handler, db: db, userL: ksync.NewKmutex(), userCache: &sync.Map{}}
 }
 
 func (u *UserInfo) Permissions() permissions {

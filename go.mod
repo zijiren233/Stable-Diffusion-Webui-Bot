@@ -8,13 +8,13 @@ require (
 	github.com/bluele/gcache v0.0.2
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/gin-gonic/gin v1.9.1
-	github.com/im7mortal/kmutex v1.0.1
 	github.com/panjf2000/ants/v2 v2.7.5
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.0
 	github.com/swaggo/swag v1.16.1
 	github.com/zijiren233/go-colorlog v1.2.4
 	github.com/zijiren233/google-translater v0.4.0
+	github.com/zijiren233/ksync v0.1.0
 	github.com/zijiren233/tg-bot-api/v6 v6.0.0-20230228032637-6de52795e7a1
 	golang.org/x/time v0.3.0
 	gopkg.in/yaml.v3 v3.0.1
