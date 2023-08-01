@@ -754,15 +754,23 @@ func (h *Handler) setCfg(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.C
 				msg.WriteByte('\n')
 			}
 		}
-		if showPreview && h.DB.DBType() == db.T_POSTGRESQL {
-			photo, err := h.DB.FindImg(db.FindConfig{
-				Deadline:   time.Now(),
-				Order:      "id desc",
-				Limit:      1,
-				KeywordsRe: []string{fmt.Sprintf("<lora:%s:(-?\\d+)(\\.\\d+)?>", l.Name)},
-			})
-			if err == nil && len(photo) == 1 {
-				msg.WriteString(fmt.Sprintf("\n# <a href=\"%s://%s/api/images/%s.png\">Preview</a>", parseflag.ApiScheme, parseflag.ApiHost, photo[0].FileID))
+		if showPreview {
+			var url string
+			if l.Preview != "" {
+				url = l.Preview
+			} else if h.DB.DBType() == db.T_POSTGRESQL {
+				photo, err := h.DB.FindImg(db.FindConfig{
+					Deadline:   time.Now(),
+					Order:      "id desc",
+					Limit:      1,
+					KeywordsRe: []string{fmt.Sprintf("<lora:%s:(-?\\d+)(\\.\\d+)?>", l.Name)},
+				})
+				if err == nil && len(photo) == 1 {
+					url = fmt.Sprintf("%s://%s/api/images/%s.png", parseflag.ApiScheme, parseflag.ApiHost, photo[0].FileID)
+				}
+			}
+			if url != "" {
+				msg.WriteString(fmt.Sprintf("\n# <a href=\"%s\">Preview</a>", url))
 			}
 		}
 		tgMsg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, msg.String())
@@ -850,15 +858,23 @@ func (h *Handler) setCfg(CallbackQuery *tgbotapi.CallbackQuery, data *tgbotapi.C
 				msg.WriteByte('\n')
 			}
 		}
-		if showPreview && h.DB.DBType() == db.T_POSTGRESQL {
-			photo, err := h.DB.FindImg(db.FindConfig{
-				Deadline:   time.Now(),
-				Order:      "id desc",
-				Limit:      1,
-				KeywordsRe: []string{fmt.Sprintf("<%s:%s:(-?\\d+)(\\.\\d+)?>", l.Type, l.Name)},
-			})
-			if err == nil && len(photo) == 1 {
-				msg.WriteString(fmt.Sprintf("\n# <a href=\"%s://%s/api/images/%s.png\">Preview</a>", parseflag.ApiScheme, parseflag.ApiHost, photo[0].FileID))
+		if showPreview {
+			var url string
+			if l.Preview != "" {
+				url = l.Preview
+			} else if h.DB.DBType() == db.T_POSTGRESQL {
+				photo, err := h.DB.FindImg(db.FindConfig{
+					Deadline:   time.Now(),
+					Order:      "id desc",
+					Limit:      1,
+					KeywordsRe: []string{fmt.Sprintf("<lora:%s:(-?\\d+)(\\.\\d+)?>", l.Name)},
+				})
+				if err == nil && len(photo) == 1 {
+					url = fmt.Sprintf("%s://%s/api/images/%s.png", parseflag.ApiScheme, parseflag.ApiHost, photo[0].FileID)
+				}
+			}
+			if url != "" {
+				msg.WriteString(fmt.Sprintf("\n# <a href=\"%s\">Preview</a>", url))
 			}
 		}
 		tgMsg := tgbotapi.NewEditMessageText(CallbackQuery.Message.Chat.ID, CallbackQuery.Message.MessageID, msg.String())
