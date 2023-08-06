@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/zijiren233/stable-diffusion-webui-bot/db"
+	parseflag "github.com/zijiren233/stable-diffusion-webui-bot/flag"
 	"github.com/zijiren233/stable-diffusion-webui-bot/gconfig"
 	"github.com/zijiren233/stable-diffusion-webui-bot/utils"
 )
@@ -238,7 +239,6 @@ func (h *Handler) CorrectCfg(cfg *db.Config, u *UserInfo, c ...ConfigFuncCorrent
 	}
 	if u == nil {
 		cfg.Steps = h.ParseSteps(cfg.Steps)
-		cfg.Num = h.ParseNum(cfg.Num)
 		if cfg.Height < 64 || cfg.Width < 64 {
 			cfg.Width = 512
 			cfg.Height = 768
@@ -247,12 +247,14 @@ func (h *Handler) CorrectCfg(cfg *db.Config, u *UserInfo, c ...ConfigFuncCorrent
 			cfg.Width = int(float64(cfg.Width) / a)
 			cfg.Height = int(float64(cfg.Height) / a)
 		}
-	} else if u.Permissions() != T_Subscribe {
+	} else if u.Permissions() == T_Subscribe {
+		cfg.Steps = h.ParseSteps(cfg.Steps)
+	} else {
 		if cfg.Steps > 28 {
 			cfg.Steps = 28
 		}
-		if cfg.Num > 3 {
-			cfg.Num = 3
+		if cfg.Num > parseflag.MaxFree {
+			cfg.Num = h.DefaultNum
 		}
 		if sum := cfg.Height * cfg.Width; sum > GuestImgMaxSize {
 			a := math.Pow(float64(sum)/GuestImgMaxSize, 0.5)
@@ -260,6 +262,7 @@ func (h *Handler) CorrectCfg(cfg *db.Config, u *UserInfo, c ...ConfigFuncCorrent
 			cfg.Height = int(float64(cfg.Height) / a)
 		}
 	}
+	cfg.Num = h.ParseNum(cfg.Num)
 	cfg.Width -= cfg.Width % 8
 	cfg.Height -= cfg.Height % 8
 	if config.Mode {
