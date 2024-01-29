@@ -78,8 +78,13 @@ func Main() {
 	if err != nil {
 		panic(err)
 	}
+	if parseflag.TgToken == "" {
+		panic("Telegram Token is empty")
+	}
+	colorlog.Infof("Telegram init...")
 	h, err := handler.New(parseflag.TgToken, a, d, hConfigs...)
 	if err != nil {
+		colorlog.Fatalf("Telegram init error: %v", err)
 		panic(err)
 	}
 	rConfigs := []router.ConfigFunc{}

@@ -402,7 +402,11 @@ func GetImgCfg(photo []byte) (*db.Config, error) {
 		return nil, err
 	}
 	defer os.Remove(fPath)
-	fm := utils.Exif.ExtractMetadata(fPath)
+	exiftool, err := utils.Exif()
+	if err != nil {
+		return nil, err
+	}
+	fm := exiftool.ExtractMetadata(fPath)
 	if fm[0].Err != nil {
 		return nil, fm[0].Err
 	}

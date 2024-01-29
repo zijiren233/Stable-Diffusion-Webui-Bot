@@ -1,15 +1,24 @@
 package utils
 
 import (
+	"errors"
+
 	"github.com/barasher/go-exiftool"
 )
 
-var Exif *exiftool.Exiftool
+var exif *exiftool.Exiftool
 
 func init() {
 	var err error
-	Exif, err = exiftool.NewExiftool()
+	exif, err = exiftool.NewExiftool()
 	if err != nil {
-		panic(err)
+		exif = nil
 	}
+}
+
+func Exif() (*exiftool.Exiftool, error) {
+	if exif == nil {
+		return nil, errors.New("exiftool not found, please install and restart")
+	}
+	return exif, nil
 }

@@ -43,7 +43,7 @@
   -max-free int
         free user max free time
   -max-num int
-        paid user max images (default 6)
+        max number of images (default 6)
   -owner int
         owner telegram id (default 2143676086)
   -port int
@@ -60,4 +60,4 @@
 
 - [Download the binary executable file corresponding to the operating system and cpu architecture](https://github.com/zijiren233/Stable-Diffusion-Webui-Bot/releases)
 - Copy `config.example.yaml` to `config.yaml` and then configure
-- Add running parameters, such as `-t <tg-bot-token>`
+- Add running parameters, such as `-tg-token <tg-bot-token>`

@@ -178,6 +178,11 @@ func (h *Handler) NewDrawConfig(cfg *db.Config, initPhoto, ControlPhoto []byte) 
 		}
 	}
 	if len(ControlPhoto) != 0 {
+		if config.AlwaysonScripts.Controlnet == nil {
+			config.AlwaysonScripts.Controlnet = &struct {
+				Args []api.ControlnetUnits "json:\"args,omitempty\""
+			}{}
+		}
 		var max int
 		if config.Width > config.Height {
 			max = config.Width

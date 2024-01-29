@@ -65,7 +65,7 @@ type apiUrl struct {
 }
 
 func (api *apiUrl) ChangeOption(config *Config) error {
-	option := map[string]interface{}{"add_version_to_infotext": false, "lora_add_hashes_to_infotext": false, "add_model_hash_to_info": false, "add_model_name_to_info": true, "deepbooru_use_spaces": true, "interrogate_clip_dict_limit": 0, "interrogate_return_ranks": true, "deepbooru_sort_alpha": false, "interrogate_deepbooru_score_threshold": 0.5, "interrogate_clip_min_length": 15, "interrogate_clip_max_length": 50, "live_previews_enable": false, "sd_vae_as_default": false, "sd_checkpoint_cache": 0, "sd_vae_checkpoint_cache": 0, "grid_save": false, "eta_noise_seed_delta": 31337, "eta_ancestral": 1, "samples_save": false, "enable_emphasis": true}
+	option := map[string]interface{}{"add_version_to_infotext": false, "lora_add_hashes_to_infotext": false, "add_model_hash_to_info": false, "add_model_name_to_info": true, "deepbooru_use_spaces": true, "interrogate_clip_dict_limit": 0, "interrogate_return_ranks": true, "deepbooru_sort_alpha": false, "interrogate_deepbooru_score_threshold": 0.5, "interrogate_clip_min_length": 15, "interrogate_clip_max_length": 50, "live_previews_enable": false, "sd_checkpoint_cache": 0, "sd_vae_checkpoint_cache": 0, "grid_save": false, "eta_noise_seed_delta": 31337, "eta_ancestral": 1, "samples_save": false, "enable_emphasis": true}
 	if config != nil {
 		if config.Model != "" {
 			option["sd_model_checkpoint"] = config.Model

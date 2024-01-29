@@ -99,7 +99,7 @@ type Config struct {
 	SamplerName       string   `json:"sampler_name"`
 	SamplerIndex      string   `json:"sampler_index"`
 	AlwaysonScripts   struct {
-		Controlnet struct {
+		Controlnet *struct {
 			Args []ControlnetUnits `json:"args,omitempty"`
 		} `json:"controlnet,omitempty"`
 	} `json:"alwayson_scripts,omitempty"`
